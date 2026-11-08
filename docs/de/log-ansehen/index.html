@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Funkblick-Log ansehen: Fahrt im Browser, auch iPhone</title>
+<meta name="description" content="Funkblick-Logs im Browser ansehen, auch auf dem iPhone: Karte, auffällige Geräte, Warnungen. Die Datei bleibt im Browser.">
+<link rel="canonical" href="https://brickystudios.github.io/funkblick/de/log-ansehen/"><link rel="alternate" hreflang="de" href="https://brickystudios.github.io/funkblick/de/log-ansehen/"><link rel="alternate" hreflang="en" href="https://brickystudios.github.io/funkblick/viewer/"><link rel="alternate" hreflang="x-default" href="https://brickystudios.github.io/funkblick/viewer/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://brickystudios.github.io/funkblick/de/log-ansehen/">
+<meta property="og:title" content="Funkblick-Log ansehen: Fahrt im Browser, auch iPhone">
+<meta property="og:description" content="Funkblick-Logs im Browser ansehen, auch auf dem iPhone: Karte, auffällige Geräte, Warnungen. Die Datei bleibt im Browser.">
+<meta property="og:image" content="https://brickystudios.github.io/funkblick/bilder/social-preview.png">
+<meta property="og:locale" content="de_DE">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0D0C0A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230D0C0A'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23FFB020' stroke-width='2'/%3E%3Cpath d='M16 16 L16 6 A10 10 0 0 1 24.7 11 Z' fill='%23FFB020'/%3E%3C/svg%3E">
+<link rel="preload" href="../../fonts/ChakraPetch-Bold.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="../../style.css">
+<script type="application/ld+json">[{"@context": "https://schema.org", "@type": "WebApplication", "name": "Funkblick log viewer", "applicationCategory": "UtilitiesApplication", "operatingSystem": "Any", "browserRequirements": "JavaScript", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"}, "inLanguage": "de", "url": "https://brickystudios.github.io/funkblick/de/log-ansehen/"}]</script><link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"><script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" defer></script><script src="../../viewer.js" defer></script>
+</head>
+<body>
+<p class="langbar" id="langbar" hidden><a href="../../viewer/">Read this in English</a><button type="button" onclick="this.parentNode.hidden=true;try{localStorage.setItem('fb.lang','1')}catch(e){}">Ausblenden</button></p><script>try{if(!localStorage.getItem("fb.lang")&&(navigator.language||"").toLowerCase().startsWith("de")!==true)document.getElementById("langbar").hidden=false}catch(e){}</script>
+<header class="top"><a class="brand" href="../../">Funkblick</a><nav><a href="../../de/airtag-finden-android/">Tracker</a><a href="../../de/versteckte-kamera-finden/">Kameras</a><a href="../../de/wlan-kanal-fritzbox/">WLAN-Kanal</a><a href="../../viewer/" hreflang="en">English</a></nav></header>
+<main>
+<section class="hero"><div><h1>Funkblick-Log ansehen</h1><p class="lead">Eine geteilte Fahrt auf jedem Handy ansehen, auch auf dem iPhone.</p><p class="cta"><button class="btn" id="pick" type="button" hidden>Datei wählen</button><input id="files" type="file" accept=".json,.geojson,application/json,application/geo+json" multiple hidden></p><noscript><p class="small">Der Betrachter braucht JavaScript. Er läuft nur in diesem Browser.</p></noscript><p class="small">Die Datei bleibt in diesem Browser, nichts wird hochgeladen. Die Kartenkacheln kommen von OpenFreeMap, das den angezeigten Ausschnitt sieht. Dateien lassen sich auch auf die Seite ziehen.</p><p class="small error" id="err" role="alert" hidden></p></div><label class="drop" for="files"><span>Datei hierher ziehen oder antippen</span><span class="small">funkblick-….json, funkblick-….geojson</span></label></section><div id="out" hidden></div><section class="intro"><p>So kommst du an eine Datei: In Funkblick unter Mehr die Fahrt exportieren. JSON enthält die Geräteliste und die Warnungen, GeoJSON die Strecke und wo die Geräte standen. Der sichere Modus ist von Anfang an an und kürzt Adressen und blendet die Namen von Heimnetzen und Handys aus, so lässt sich die JSON-Datei weitergeben. Die GeoJSON-Datei enthält deine genaue Strecke samt Startpunkt: Teile sie nur mit Leuten, die das wissen dürfen.</p></section>
+</main>
+<footer><p>Funkblick ist freie Software unter GPL-3.0. Herstellerdaten: IEEE. Blitzer: © OpenStreetMap-Mitwirkende (ODbL). Kein Projekt von Apple, Google, Samsung, Blitzer.de oder SØPHIA.</p><ul><li><a href="https://github.com/BrickyStudios/funkblick">Quellcode</a></li><li><a href="../../de/log-ansehen/">Log ansehen</a></li><li><a href="https://github.com/BrickyStudios/funkblick/releases">Releases</a></li><li><a href="../../sitemap.xml">Sitemap</a></li></ul></footer>
+</body>
+</html>

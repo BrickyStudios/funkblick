@@ -17,7 +17,7 @@ IMG = BASE + "bilder/social-preview.png"
 PAGES = []
 
 
-def page(slug, lang, title, desc, body, schema, alt=None):
+def page(slug, lang, title, desc, body, schema, alt=None, head=""):
     """slug '' = home. alt = {lang: slug} of the same page in the other language."""
     assert len(title) <= 62, f"title too long ({len(title)}): {title}"
     assert len(desc) <= 160, f"description too long ({len(desc)}): {desc}"
@@ -69,7 +69,7 @@ def page(slug, lang, title, desc, body, schema, alt=None):
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230D0C0A'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23FFB020' stroke-width='2'/%3E%3Cpath d='M16 16 L16 6 A10 10 0 0 1 24.7 11 Z' fill='%23FFB020'/%3E%3C/svg%3E">
 <link rel="preload" href="{root}fonts/ChakraPetch-Bold.ttf" as="font" type="font/ttf" crossorigin>
 <link rel="stylesheet" href="{root}style.css">
-<script type="application/ld+json">{json.dumps(schema, ensure_ascii=False)}</script>
+<script type="application/ld+json">{json.dumps(schema, ensure_ascii=False)}</script>{head}
 </head>
 <body>
 {langbar}
@@ -77,7 +77,7 @@ def page(slug, lang, title, desc, body, schema, alt=None):
 <main>
 {body}
 </main>
-<footer><p>{foot}</p><ul><li><a href="{REPO}">{"Quellcode" if de else "Source code"}</a></li><li><a href="{REPO}/releases">Releases</a></li><li><a href="{root}sitemap.xml">Sitemap</a></li></ul></footer>
+<footer><p>{foot}</p><ul><li><a href="{REPO}">{"Quellcode" if de else "Source code"}</a></li><li><a href="{root}{"de/log-ansehen/" if de else "viewer/"}">{"Log ansehen" if de else "Log viewer"}</a></li><li><a href="{REPO}/releases">Releases</a></li><li><a href="{root}sitemap.xml">Sitemap</a></li></ul></footer>
 </body>
 </html>
 """
@@ -521,6 +521,37 @@ def build():
               False, "../", "en", 2, "Funkblick radar: Wi-Fi as circles and Bluetooth as squares around the phone, rings in dBm")
          + f'<section><h2>Side by side</h2>{table}</section>' + limits(False),
          [app_schema("en", desc)])
+
+    # ------------------------------------------------------------ log viewer (plan F6)
+    for de, slug, other in [(False, "viewer/", "de/log-ansehen/"), (True, "de/log-ansehen/", "viewer/")]:
+        root = "../" * slug.count("/")
+        desc = ("Funkblick-Logs im Browser ansehen, auch auf dem iPhone: Karte, auffällige Geräte, Warnungen. Die Datei bleibt im Browser."
+                if de else "Open a Funkblick log in any browser, iPhone included: map, notable devices, alerts. The file never leaves your browser.")
+        body = (f'<section class="hero"><div><h1>{"Funkblick-Log ansehen" if de else "Open a Funkblick log"}</h1>'
+                f'<p class="lead">{"Eine geteilte Fahrt auf jedem Handy ansehen, auch auf dem iPhone." if de else "See a shared drive on any phone, iPhone included."}</p>'
+                f'<p class="cta"><button class="btn" id="pick" type="button" hidden>{"Datei wählen" if de else "Choose a file"}</button>'
+                '<input id="files" type="file" accept=".json,.geojson,application/json,application/geo+json" multiple hidden></p>'
+                f'<noscript><p class="small">{"Der Betrachter braucht JavaScript. Er läuft nur in diesem Browser." if de else "The viewer needs JavaScript. It runs only in this browser."}</p></noscript>'
+                f'<p class="small">{"Die Datei bleibt in diesem Browser, nichts wird hochgeladen. Die Kartenkacheln kommen von OpenFreeMap, das den angezeigten Ausschnitt sieht. Dateien lassen sich auch auf die Seite ziehen." if de else "The file stays in this browser, nothing is uploaded. Map tiles come from OpenFreeMap, which sees the area on screen. You can also drop files onto the page."}</p>'
+                '<p class="small error" id="err" role="alert" hidden></p></div>'
+                f'<label class="drop" for="files"><span>{"Datei hierher ziehen oder antippen" if de else "Drop a file here or tap"}</span>'
+                '<span class="small">funkblick-….json, funkblick-….geojson</span></label></section><div id="out" hidden></div>'
+                '<section class="intro"><p>' + (
+                    "So kommst du an eine Datei: In Funkblick unter Mehr die Fahrt exportieren. JSON enthält die Geräteliste und die Warnungen, GeoJSON die Strecke und wo die Geräte standen. "
+                    "Der sichere Modus ist von Anfang an an und kürzt Adressen und blendet die Namen von Heimnetzen und Handys aus, so lässt sich die JSON-Datei weitergeben. "
+                    "Die GeoJSON-Datei enthält deine genaue Strecke samt Startpunkt: Teile sie nur mit Leuten, die das wissen dürfen."
+                    if de else
+                    "How to get a file: in Funkblick, open More and export the drive. JSON carries the device list and the alerts, GeoJSON the route and where devices were. "
+                    "Safe mode is on from the start: it shortens addresses and hides the names of homes and phones, so the JSON file can be passed on. "
+                    "The GeoJSON file holds your exact route, including where you started: share it only with people who may know that.") + "</p></section>")
+        head = ('<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">'
+                '<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" defer></script>'
+                f'<script src="{root}viewer.js" defer></script>')
+        page(slug, "de" if de else "en", "Funkblick-Log ansehen: Fahrt im Browser, auch iPhone" if de else "Funkblick log viewer: open a drive in any browser",
+             desc, body, [{"@context": "https://schema.org", "@type": "WebApplication", "name": "Funkblick log viewer", "applicationCategory": "UtilitiesApplication",
+                           "operatingSystem": "Any", "browserRequirements": "JavaScript", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"},
+                           "inLanguage": "de" if de else "en", "url": BASE + slug}],
+             {"de" if de else "en": slug, "en" if de else "de": other}, head)
 
     # ------------------------------------------------------------ sitemap
     urls = "".join(f"<url><loc>{BASE + s}</loc></url>" for s in PAGES)
