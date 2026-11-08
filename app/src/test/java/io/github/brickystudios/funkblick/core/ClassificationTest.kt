@@ -99,7 +99,7 @@ class ClassifierTest {
         for (n in listOf("BMW 10003", "DIRECT-BMW 10007", "My VW 1013", "My SEAT 1012", "Audi_MMI_1002", "My BMW Hotspot 1010", "CarPlay_1005", "CAR-WIFI-1004", "Hyundai_1008", "Share_RENAULT_HotSpot_1016", "Toyota 1017"))
             assertEquals(n, Category.CAR, c.classify(wifi("3A:00:00:00:00:24", n), emptyList()).category)
         assertEquals(Category.FLEET, c.classify(wifi("20:97:27:00:00:23", "RUT956_1014"), emptyList()).category)
-        assertEquals(Category.FLEET, c.classify(wifi("00:EE:F2:00:00:22", "4G-MIFI-1001"), emptyList()).category)
+        assertEquals(Category.PERSONAL, c.classify(wifi("00:EE:F2:00:00:22", "4G-MIFI-1001"), emptyList()).category) // pocket router, no alert since 1.5.1
         assertEquals(Category.HOME, c.classify(wifi("4A:00:00:00:00:26", "DIRECT-1A-HP LaserJet 1006"), emptyList()).category)
         assertEquals(Category.CAMERA, c.classify(wifi("E0:09:BF:00:00:2B", "IPCAM-101009"), emptyList()).category)
         assertEquals(Category.CAMERA, c.classify(wifi("9C:76:13:00:00:28", "Ring Setup 1f"), emptyList()).category)
@@ -183,6 +183,18 @@ class SessionTest {
     @Test fun staleObservationsDontRing() {
         assertNull(session.add(cam(clock - FRESH_MS - 1), emptyList(), AlertSettings()))
         assertEquals(1, session.devices.size)
+    }
+
+    @Test fun drivingPastAHouseCameraStaysQuiet() {
+        // seen once at 50 km/h: a house camera by the road
+        assertNull(session.add(cam(clock), emptyList(), AlertSettings(), 53.55, 9.99, 50f))
+        // a camera that stays a minute while you drive (a dashcam behind you) does ring
+        clock += CAMERA_DRIVING_MS
+        assertEquals(AlertReason.CAMERA, session.add(cam(clock), emptyList(), AlertSettings(), 53.56, 9.99, 50f)?.reason)
+    }
+
+    @Test fun standingStillACameraRingsAtOnce() {
+        assertEquals(AlertReason.CAMERA, session.add(cam(clock), emptyList(), AlertSettings(), 53.55, 9.99, 0f)?.reason)
     }
 
     @Test fun cooldownPerDevice() {

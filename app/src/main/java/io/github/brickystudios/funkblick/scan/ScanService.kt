@@ -7,6 +7,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
@@ -29,12 +30,14 @@ import android.os.Looper
 import android.os.ParcelUuid
 import android.os.PowerManager
 import android.os.SystemClock
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import io.github.brickystudios.funkblick.MainActivity
 import io.github.brickystudios.funkblick.R
 import io.github.brickystudios.funkblick.core.APPLE
+import io.github.brickystudios.funkblick.core.FRESH_MS
 import io.github.brickystudios.funkblick.core.Alert
 import io.github.brickystudios.funkblick.core.Radio
 import io.github.brickystudios.funkblick.core.RuleField
@@ -94,6 +97,7 @@ class ScanService : Service() {
         if (Funk.settings.value.ble) startBle()
         startLocation()
         registerReceiver(screen, IntentFilter().apply { addAction(Intent.ACTION_SCREEN_ON); addAction(Intent.ACTION_SCREEN_OFF) })
+        registerReceiver(radios, IntentFilter().apply { addAction(BluetoothAdapter.ACTION_STATE_CHANGED); addAction(WifiManager.WIFI_STATE_CHANGED_ACTION) })
         main.post(tick)
         main.postDelayed({ alerter.play("start", voice = true) }, 400) // SoundPool needs a moment to load
         return START_STICKY
@@ -103,6 +107,8 @@ class ScanService : Service() {
         main.removeCallbacksAndMessages(null)
         runCatching { unregisterReceiver(wifiReceiver) }
         runCatching { unregisterReceiver(screen) }
+        runCatching { unregisterReceiver(radios) }
+        radioBack(bt = true); radioBack(bt = false)
         stopBle()
         runCatching { getSystemService(LocationManager::class.java).removeUpdates(location) }
         if (Funk.running.value) {
@@ -115,6 +121,9 @@ class ScanService : Service() {
         main.postDelayed({ alerter.release() }, 1500) // let the stop sound finish
         super.onDestroy()
     }
+
+    /** Swiped away from the recent apps: closing the app ends the scan and saves the log. */
+    override fun onTaskRemoved(rootIntent: Intent?) = stopSelf()
 
     // ------------------------------------------------------------- loop
 
@@ -172,6 +181,8 @@ class ScanService : Service() {
             val bssid = r.BSSID ?: continue
             @Suppress("DEPRECATION") val ssid = r.SSID?.takeIf { it.isNotEmpty() }
             val seen = now - (bootNow - r.timestamp / 1000) // timestamp: microseconds since boot
+            // Android's cache still holds the last scan's results, maybe from the previous drive: they'd land here on the map
+            if (seen < Funk.diag.value.serviceSince - FRESH_MS) continue
             handle(Sighting(Radio.WIFI, bssid.uppercase(), ssid, r.level, seen, r.frequency, securityOf(r.capabilities ?: "")))
         }
         Funk.diag.value = Funk.diag.value.copy(wifiResults = results.size, lastWifi = now)
@@ -257,6 +268,46 @@ class ScanService : Service() {
         }
     }
 
+    // ------------------------------------------------------------- radios switched off
+
+    /** GrapheneOS can switch Wi-Fi and Bluetooth off after a while without a connection; Bluetooth also needs a restart of the scan. */
+    private val radios = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) {
+            if (i.action == BluetoothAdapter.ACTION_STATE_CHANGED) when (i.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)) {
+                BluetoothAdapter.STATE_ON -> { bleFiltered = null; if (Funk.settings.value.ble) startBle(); radioBack(bt = true) }
+                BluetoothAdapter.STATE_OFF -> {
+                    bleFiltered = null // the scan died with the radio
+                    Funk.diag.value = Funk.diag.value.copy(bleRunning = false)
+                    if (Funk.settings.value.ble) radioOff(bt = true)
+                }
+            } else when (i.getIntExtra(WifiManager.EXTRA_WIFI_STATE, -1)) {
+                WifiManager.WIFI_STATE_ENABLED -> radioBack(bt = false)
+                WifiManager.WIFI_STATE_DISABLED -> if (applicationContext.getSystemService(WifiManager::class.java)?.isScanAlwaysAvailable != true) radioOff(bt = false)
+            }
+        }
+    }
+
+    private fun radioOff(bt: Boolean) {
+        val tap = PendingIntent.getActivity(this, if (bt) 2 else 3, radioOn(this, bt).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
+        val text = if (bt) tr("Ohne Bluetooth keine Tracker-Warnung. Tippen zum Einschalten.", "No tracker alerts without Bluetooth. Tap to turn it on.")
+        else tr("Ohne WLAN keine WLAN-Scans. Tippen zum Einschalten.", "No Wi-Fi scans without Wi-Fi. Tap to turn it on.")
+        val tip = tr("Schaltet GrapheneOS es von selbst aus: in den Einstellungen nach „automatisch“ suchen und den Timer auf „Nie“ stellen.",
+            "If GrapheneOS switches it off by itself: search Settings for \"automatically\" and set the timer to never.")
+        val n = NotificationCompat.Builder(this, Alerter.CHANNEL_ALERTS)
+            .setSmallIcon(R.drawable.ic_stat)
+            .setContentTitle(if (bt) tr("Bluetooth ist aus", "Bluetooth is off") else tr("WLAN ist aus", "Wi-Fi is off"))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$text $tip"))
+            .setContentIntent(tap)
+            .setAutoCancel(true)
+            .build()
+        runCatching { getSystemService(NotificationManager::class.java).notify(radioId(bt), n) }
+    }
+
+    private fun radioBack(bt: Boolean) = runCatching { getSystemService(NotificationManager::class.java).cancel(radioId(bt)) }
+
+    private fun radioId(bt: Boolean) = if (bt) NOTIFICATION_BT else NOTIFICATION_WIFI
+
     // ------------------------------------------------------------- position + speed cameras
 
     private val location = LocationListener { l: Location ->
@@ -315,10 +366,20 @@ class ScanService : Service() {
     companion object {
         private const val CHANNEL_SCAN = "scan"
         private const val NOTIFICATION_ID = 1
+        private const val NOTIFICATION_BT = 2
+        private const val NOTIFICATION_WIFI = 3
         private const val ACTION_STOP = "stop"
         private const val BASE_LSB = -0x7fffff7fa064cb05L // 0x800000805F9B34FB
 
         fun start(context: Context) = ContextCompat.startForegroundService(context, Intent(context, ScanService::class.java))
         fun stop(context: Context) = context.startService(Intent(context, ScanService::class.java).setAction(ACTION_STOP))
+
+        /** One tap instead of a trip through Settings: since Android 10 (Wi-Fi) and 13 (Bluetooth) no app may switch them on itself. */
+        fun radioOn(context: Context, bt: Boolean): Intent = when {
+            !bt -> Intent(if (Build.VERSION.SDK_INT >= 29) Settings.Panel.ACTION_WIFI else Settings.ACTION_WIFI_SETTINGS)
+            Build.VERSION.SDK_INT < 31 || ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED ->
+                Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            else -> Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
+        }
     }
 }

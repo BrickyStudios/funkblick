@@ -76,6 +76,7 @@ import io.github.brickystudios.funkblick.core.label
 import io.github.brickystudios.funkblick.core.tr
 import io.github.brickystudios.funkblick.core.tripStats
 import io.github.brickystudios.funkblick.core.TrackPoint
+import io.github.brickystudios.funkblick.scan.ScanService
 import io.github.brickystudios.funkblick.scan.Funk
 import kotlinx.coroutines.delay
 
@@ -170,14 +171,14 @@ fun DeviceRow(d: Device, m: Masker, now: Long, onClick: () -> Unit) {
 }
 
 /** What is switched off right now that stops alerts (plan 2E). Checked every second while scanning. */
-private fun missing(c: Context): Pair<String, String>? {
+private fun missing(c: Context): Pair<String, Intent>? {
     val lm = c.getSystemService(LocationManager::class.java)
     val wifi = c.applicationContext.getSystemService(WifiManager::class.java)
     val bt = c.getSystemService(BluetoothManager::class.java)?.adapter
     return when {
-        lm != null && !LocationManagerCompat.isLocationEnabled(lm) -> tr("Standort aus: keine WLAN-Scans", "Location off: no Wi-Fi scans") to Settings.ACTION_LOCATION_SOURCE_SETTINGS
-        bt != null && !bt.isEnabled && Funk.settings.value.ble -> tr("Bluetooth aus: keine Tracker-Warnung", "Bluetooth off: no tracker alerts") to Settings.ACTION_BLUETOOTH_SETTINGS
-        wifi != null && !wifi.isWifiEnabled && !wifi.isScanAlwaysAvailable -> tr("WLAN aus: keine WLAN-Scans", "Wi-Fi off: no Wi-Fi scans") to Settings.ACTION_WIFI_SETTINGS
+        lm != null && !LocationManagerCompat.isLocationEnabled(lm) -> tr("Standort aus: keine WLAN-Scans", "Location off: no Wi-Fi scans") to Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+        bt != null && !bt.isEnabled && Funk.settings.value.ble -> tr("Bluetooth aus: keine Tracker-Warnung", "Bluetooth off: no tracker alerts") to ScanService.radioOn(c, bt = true)
+        wifi != null && !wifi.isWifiEnabled && !wifi.isScanAlwaysAvailable -> tr("WLAN aus: keine WLAN-Scans", "Wi-Fi off: no Wi-Fi scans") to ScanService.radioOn(c, bt = false)
         else -> null
     }
 }
@@ -218,7 +219,7 @@ fun LiveScreen(running: Boolean, demo: Boolean, onStart: () -> Unit, onStop: () 
         }
         if (miss != null) item {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(C.red.copy(alpha = 0.14f))
-                .clickable(role = Role.Button) { runCatching { context.startActivity(Intent(miss.second)) } }.heightIn(min = 48.dp).padding(16.dp),
+                .clickable(role = Role.Button) { runCatching { context.startActivity(miss.second) } }.heightIn(min = 48.dp).padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(miss.first, color = C.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
                 Text(tr("Einschalten", "Turn on"), color = C.red, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
@@ -251,6 +252,8 @@ fun LiveScreen(running: Boolean, demo: Boolean, onStart: () -> Unit, onStop: () 
                     BigButton(tr("Auto-Modus", "Car mode"), filled = false, modifier = Modifier.weight(1f), onClick = onCar)
                     BigButton(tr("Diskret", "Discreet"), filled = false, color = C.dim, modifier = Modifier.weight(1f), onClick = onDiscreet)
                 }
+                // up here, not below the list: the first drives showed nobody found it down there
+                if (running) BigButton(tr("Scan stoppen", "Stop scan"), filled = false, color = C.text, onClick = onStop)
                 if (!running) {
                     if (hasSession) Recap(devices, alerts, track.map { TrackPoint(it.lat, it.lon, it.time) })
                     BigButton(tr("Scan starten", "Start scan"), filled = true, onClick = onStart)
@@ -264,7 +267,6 @@ fun LiveScreen(running: Boolean, demo: Boolean, onStart: () -> Unit, onStop: () 
             items(rows, key = { it.id }) { d -> DeviceRow(d, m, now) { if (d.cls.category == Category.TRACKER) onFind(d.id) else onOpen(d) } }
             if (top.isEmpty()) item { Text(tr("Nichts Auffälliges in Reichweite.", "Nothing notable in range."), color = C.dim, fontSize = 14.sp) }
         }
-        if (running) item { Gap(8); BigButton(tr("Scan stoppen", "Stop scan"), filled = false, color = C.dim, onClick = onStop) }
     }
 }
 

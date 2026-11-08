@@ -134,7 +134,8 @@ fun CarScreen(running: Boolean, onStart: () -> Unit, onEnableTraffic: () -> Unit
             if (!settings.traffic) BigButton(tr("Verkehrs-Hinweise einschalten", "Turn on traffic alerts"), filled = false, color = C.red, height = 64, onClick = onEnableTraffic)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BigButton("Blitzer.de", filled = false, color = C.dim, height = 64, modifier = Modifier.weight(1f)) { openBlitzerDe(context) }
-                BigButton(tr("Beenden", "Close"), filled = false, height = 64, modifier = Modifier.weight(1f), onClick = onClose)
+                // ending the drive ends the scan too; the back gesture only leaves car mode
+                BigButton(if (running) tr("Fahrt beenden", "End drive") else tr("Schließen", "Close"), filled = false, height = 64, modifier = Modifier.weight(1f), onClick = onClose)
             }
             if (settings.traffic) TextAction(if (refreshing) tr("Blitzer werden geladen", "Loading speed cameras") else tr("Blitzer der Region aktualisieren", "Refresh speed cameras for this region"), color = C.dim) {
                 val f = fix ?: run { Toast.makeText(context, tr("Erst braucht es eine GPS-Position.", "Needs a GPS position first."), Toast.LENGTH_LONG).show(); return@TextAction }

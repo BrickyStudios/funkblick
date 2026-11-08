@@ -179,7 +179,7 @@ object Funk {
     fun alertSettings() = _settings.value.let { AlertSettings(trackers = it.trackers, cameras = it.cameras, traffic = it.traffic) }
 
     /** One sighting from a radio. Returns the alert to ring, if any. */
-    fun ingest(s: Sighting): Alert? = fix.value.let { f -> session.add(s, _rules.value, alertSettings(), f?.lat, f?.lon) }
+    fun ingest(s: Sighting): Alert? = fix.value.let { f -> session.add(s, _rules.value, alertSettings(), f?.lat, f?.lon, f?.speedKmh) }
 
     fun publish() {
         _devices.value = session.devices.values.toList()

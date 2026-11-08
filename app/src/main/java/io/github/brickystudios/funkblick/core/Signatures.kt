@@ -40,8 +40,12 @@ val NAME_SIGNATURES = listOf(
     Signature(Category.PRIORITY, re("^axon|axon body|watchguard|bodycam|body cam")) {
         tr("Name typisch für eine Bodycam", "Name typical of a body cam")
     },
-    Signature(Category.FLEET, re("^(rut[x0-9]|teltonika|cradlepoint|ibr\\d|mifi)|mifi|^4g[-_ ]|^lte[-_ ]|^5g[-_ ]router")) {
+    Signature(Category.FLEET, re("^(rut[x0-9]|teltonika|cradlepoint|ibr\\d)")) {
         tr("Name typisch für einen Mobilfunkrouter (Fahrzeug, Baustelle, Messanhänger)", "Name typical of a cellular router (vehicle, building site, trailer)")
+    },
+    // 4G-MIFI-xxxx and the like are 30-euro pocket routers: on the first drives they rang as "vehicle router" for nothing
+    Signature(Category.PERSONAL, re("mifi|^4g[-_ ]|^lte[-_ ]|^5g[-_ ]router")) {
+        tr("Name typisch für einen mobilen WLAN-Router zum Mitnehmen (MiFi), meist privat", "Name typical of a pocket Wi-Fi router (MiFi), mostly private")
     },
     Signature(Category.CAR, re("^(bmw \\d{4,6}|direct-bmw|my (bmw|vw|seat|cupra|skoda|ford|opel|peugeot|renault|citroen|mini)|audi_mmi|audi\\d|hyundai|kia[ _]|toyota|share_renault|carplay_|car-wifi|smartphone_connect|skoda|tesla|volvo|porsche|mercedes|mbux|mb hotspot|vw[ _]wlan|polestar|jeep|fiat)")) {
         tr("Name typisch für das WLAN eines Autos (Infotainment, CarPlay, Hotspot)", "Name typical of a car's Wi-Fi (infotainment, CarPlay, hotspot)")

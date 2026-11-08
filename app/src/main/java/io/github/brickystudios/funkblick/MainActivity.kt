@@ -156,7 +156,7 @@ class MainActivity : ComponentActivity() {
                 }
                 BackHandler(mode != Mode.TABS && mode != Mode.DISCREET) { mode = Mode.TABS }
                 when (mode) {
-                    Mode.CAR -> CarScreen(running, ::start, { warn = true }) { mode = Mode.TABS }
+                    Mode.CAR -> CarScreen(running, ::start, { warn = true }) { if (running) ScanService.stop(this@MainActivity); mode = Mode.TABS }
                     Mode.DISCREET -> DiscreetScreen { mode = Mode.TABS }
                     Mode.CHANNELS -> Box(Modifier.fillMaxSize().background(C.ink).statusBarsPadding()) { ChannelsScreen() }
                     Mode.TABS -> Column(Modifier.fillMaxSize().background(C.ink).statusBarsPadding()) {
