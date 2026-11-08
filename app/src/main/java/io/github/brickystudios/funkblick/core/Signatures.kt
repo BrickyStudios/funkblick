@@ -47,11 +47,14 @@ val NAME_SIGNATURES = listOf(
     Signature(Category.PERSONAL, re("mifi|^4g[-_ ]|^lte[-_ ]|^5g[-_ ]router")) {
         tr("Name typisch für einen mobilen WLAN-Router zum Mitnehmen (MiFi), meist privat", "Name typical of a pocket Wi-Fi router (MiFi), mostly private")
     },
-    Signature(Category.CAR, re("^(bmw \\d{4,6}|direct-bmw|my (bmw|vw|seat|cupra|skoda|ford|opel|peugeot|renault|citroen|mini)|audi_mmi|audi\\d|hyundai|kia[ _]|toyota|share_renault|carplay_|car-wifi|smartphone_connect|skoda|tesla|volvo|porsche|mercedes|mbux|mb hotspot|vw[ _]wlan|polestar|jeep|fiat)")) {
+    Signature(Category.CAR, re("^(bmw \\d{4,6}|direct-bmw|direct-mb|my (bmw|vw|seat|cupra|skoda|ford|opel|peugeot|renault|citroen|mini)|audi_mmi|audi\\d|hyundai|kia[ _]|toyota|share_renault|carplay_|car-wifi|smartphone_connect|skoda|tesla|volvo|porsche|mercedes|mbux|mb hotspot|vw[ _]wlan|polestar|jeep|fiat|ford\\b|tourneo|s-max|sprinter)")) {
         tr("Name typisch für das WLAN eines Autos (Infotainment, CarPlay, Hotspot)", "Name typical of a car's Wi-Fi (infotainment, CarPlay, hotspot)")
     },
     Signature(Category.HOME, re("^direct-.*(hp|laserjet|officejet|deskjet|envy|smart tank|epson|canon|brother|bravia|samsung)")) {
         tr("Drucker oder Fernseher mit WLAN Direct", "Printer or TV with Wi-Fi Direct")
+    },
+    Signature(Category.HOME, re("^\\[(lg|tv|av)\\]|webos tv")) {
+        tr("Name typisch für einen Fernseher oder eine Soundbar", "Name typical of a TV or soundbar")
     },
     Signature(Category.PUBLIC_WIFI, re("^(wifionice|wifi@db|telekom|telekom_fon|eduroam|cdwifi|flixbus.*)$|freifunk|bayernwlan|vodafone (hotspot|homespot)|railnet")) {
         tr("Bekanntes öffentliches WLAN (Bahn, Hotspot, Freifunk, Hochschule)", "Known public Wi-Fi (train, hotspot, Freifunk, university)")

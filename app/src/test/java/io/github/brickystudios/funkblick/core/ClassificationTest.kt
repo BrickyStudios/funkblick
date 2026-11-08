@@ -104,6 +104,14 @@ class ClassifierTest {
         assertEquals(Category.CAMERA, c.classify(wifi("E0:09:BF:00:00:2B", "IPCAM-101009"), emptyList()).category)
         assertEquals(Category.CAMERA, c.classify(wifi("9C:76:13:00:00:28", "Ring Setup 1f"), emptyList()).category)
         assertEquals(Category.CAR, c.classify(wifi("00:13:1E:00:00:21", "x"), emptyList()).category) // peiker acustic, BMW telematics
+        for (n in listOf("DIRECT-MB Hotspot 1018", "Ford Tourneo 1019", "Sprinter 1020"))
+            assertEquals(n, Category.CAR, c.classify(wifi("3A:00:00:00:00:2C", n), emptyList()).category)
+    }
+
+    @Test fun aTvWithACarSuppliersChipIsATv() {
+        // LG Innotek builds car modules and TV radios alike; the name settles it
+        assertEquals(Category.HOME, c.classify(ble("00:05:C9:00:00:2D", "[LG] webOS TV 1021"), emptyList()).category)
+        assertEquals(Category.CAR, c.classify(ble("00:05:C9:00:00:2E", "x"), emptyList()).category)
     }
 
     @Test fun axonIsPublicSafetyGear() {

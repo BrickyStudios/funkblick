@@ -36,7 +36,8 @@ class Classifier(private val oui: OuiDb) {
             ev += Evidence(Source.PAYLOAD, tr("Sendet wie ${tracker.kind.label} ($state)", "Broadcasts like ${tracker.kind.label} ($state)"), Confidence.HIGH)
             candidates += if (tracker.kind.isTag) Category.TRACKER else Category.PERSONAL
         }
-        matchName(s.name)?.let { sig ->
+        val byName = matchName(s.name)
+        byName?.let { sig ->
             ev += Evidence(Source.NAME, sig.why(), Confidence.MEDIUM)
             candidates += sig.category
         }
@@ -60,6 +61,8 @@ class Classifier(private val oui: OuiDb) {
 
         // a train's or bus's passenger Wi-Fi (WIFIonICE on an Icomera router) is public Wi-Fi, not a vehicle to report
         if (Category.PUBLIC_WIFI in candidates) candidates.remove(Category.FLEET)
+        // car makers' module suppliers (LG Innotek, Alps Alpine, Panasonic) also build TVs and controllers: a name that says what it is wins
+        if (byName != null && byName.category != Category.CAR) candidates.remove(Category.CAR)
         // otherwise the most specific finding wins; enum order is TRACKER, PRIORITY, CAMERA, FLEET, PUBLIC_WIFI, ...
         val category = candidates.minByOrNull { it.ordinal } ?: Category.UNKNOWN
         return Classification(vendor, random, category, tracker, ev, watch, mute)
