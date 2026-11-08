@@ -66,3 +66,4 @@ funkblick-*.md
 .hallmark/*.json
 .hallmark/shots/
 .hallmark/before/
+docs/**/.hallmark/
