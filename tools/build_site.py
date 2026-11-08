@@ -38,8 +38,8 @@ def page(slug, lang, title, desc, body, schema, alt=None):
     )
     # browser language differs from page language: one dismissible line, never a redirect (Google crawls from the US)
     langbar = (
-        f'<p class="langbar" id="langbar" hidden><a href="{root}{other}">{"Read this in English →" if de else "Diese Seite auf Deutsch lesen →"}</a>'
-        f'<button type="button" aria-label="{"Ausblenden" if de else "Hide"}" onclick="this.parentNode.hidden=true;try{{localStorage.setItem(\'fb.lang\',\'1\')}}catch(e){{}}">✕</button></p>'
+        f'<p class="langbar" id="langbar" hidden><a href="{root}{other}">{"Read this in English" if de else "Diese Seite auf Deutsch lesen"}</a>'
+        f'<button type="button" onclick="this.parentNode.hidden=true;try{{localStorage.setItem(\'fb.lang\',\'1\')}}catch(e){{}}">{"Ausblenden" if de else "Hide"}</button></p>'
         f'<script>try{{if(!localStorage.getItem("fb.lang")&&(navigator.language||"").toLowerCase().startsWith("de")!=={str(de).lower()})document.getElementById("langbar").hidden=false}}catch(e){{}}</script>'
     )
     foot = (
@@ -49,6 +49,7 @@ def page(slug, lang, title, desc, body, schema, alt=None):
         "Funkblick is free software under GPL-3.0. Maker data: IEEE. Speed cameras: © OpenStreetMap contributors (ODbL). "
         "Not affiliated with Apple, Google, Samsung, Blitzer.de or SØPHIA."
     )
+    body = curly(body)
     out = f"""<!doctype html>
 <html lang="{lang}">
 <head>
@@ -72,11 +73,11 @@ def page(slug, lang, title, desc, body, schema, alt=None):
 </head>
 <body>
 {langbar}
-<header class="top"><a class="brand" href="{root or './'}">FUNKBLICK</a><nav>{nav}</nav></header>
+<header class="top"><a class="brand" href="{root or './'}">Funkblick</a><nav>{nav}</nav></header>
 <main>
 {body}
 </main>
-<footer><p>{foot}</p><p><a href="{REPO}">{"Quellcode" if de else "Source code"}</a> · <a href="{REPO}/releases">Releases</a> · <a href="{root}sitemap.xml">Sitemap</a></p></footer>
+<footer><p>{foot}</p><ul><li><a href="{REPO}">{"Quellcode" if de else "Source code"}</a></li><li><a href="{REPO}/releases">Releases</a></li><li><a href="{root}sitemap.xml">Sitemap</a></li></ul></footer>
 </body>
 </html>
 """
@@ -84,6 +85,11 @@ def page(slug, lang, title, desc, body, schema, alt=None):
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(out, encoding="utf-8")
     PAGES.append(slug)
+
+
+def curly(s):
+    """Straight apostrophes between letters become typographic ones; tags and attributes have none."""
+    return re.sub(r"(?<=\w)'(?=\w)", "\u2019", s)
 
 
 def app_schema(lang, desc):
@@ -111,19 +117,32 @@ def howto(name, steps):
 
 def cta(de):
     if de:
-        return (f'<p class="cta"><a class="btn" href="{APK}">APK herunterladen</a><a class="btn ghost" href="{REPO}">Quellcode auf GitHub</a></p>'
-                '<p class="small">Kostenlos, Android 8.0 oder neuer, läuft auf GrapheneOS ohne Google-Dienste. Kein Konto. Updates holt die App selbst von GitHub.</p>')
-    return (f'<p class="cta"><a class="btn" href="{APK}">Download the APK</a><a class="btn ghost" href="{REPO}">Source on GitHub</a></p>'
-            '<p class="small">Free, Android 8.0 or newer, runs on GrapheneOS without Google services. No account. The app fetches its own updates from GitHub.</p>')
+        return (f'<p class="cta"><a class="btn" href="{APK}">APK herunterladen</a><a class="quiet" href="{REPO}">Quellcode auf GitHub</a></p>'
+                '<p class="small">Kostenlos, Android 8.0 oder neuer, läuft auf GrapheneOS ohne Google-Dienste. Kein Konto.</p>')
+    return (f'<p class="cta"><a class="btn" href="{APK}">Download the APK</a><a class="quiet" href="{REPO}">Source on GitHub</a></p>'
+            '<p class="small">Free, Android 8.0 or newer, runs on GrapheneOS without Google services. No account.</p>')
 
 
-def shots(root, lang, nums, alts):
-    return '<div class="shots">' + "".join(
-        f'<img src="{root}bilder/{lang}-{n}.jpg" width="1080" height="1920" loading="lazy" alt="{html.escape(a)}">' for n, a in zip(nums, alts)) + "</div>"
+# the real app screens from docs/bilder/app/, taken with the Hamburg demo (tools/screenshots)
+SHOTS = {1: "map", 2: "radar", 3: "notable", 4: "device", 5: "car", 6: "discreet", 7: "channels"}
 
 
-def hero(h1, lead, de, root, lang, nums, alts):
-    return f'<section class="hero"><p class="kicker">{"WLAN · BLUETOOTH · ANDROID" if de else "WI-FI · BLUETOOTH · ANDROID"}</p><h1>{h1}</h1><p class="lead">{lead}</p>{cta(de)}</section>{shots(root, lang, nums, alts)}'
+def img(root, lang, n, alt, lazy=True):
+    return (f'<img src="{root}bilder/app/{lang}-{n}-{SHOTS[n]}.png" width="540" height="1200" alt="{html.escape(alt)}"'
+            + (' loading="lazy"' if lazy else ' fetchpriority="high"') + ">")
+
+
+def hero(h1, line, intro, de, root, lang, n, alt):
+    """h1 of seven words at most, one sentence of twelve at most, the actions and one screen. intro carries the long text."""
+    assert len(h1.split()) <= 7 and len(line.split()) <= 12, (h1, line)
+    return (f'<section class="hero"><div><h1>{h1}</h1><p class="lead">{line}</p>{cta(de)}</div>{img(root, lang, n, alt, lazy=False)}</section>'
+            f'<section class="intro"><p>{intro}</p></section>')
+
+
+def pair(root, lang, items):
+    """Two screens side by side, each with a short caption."""
+    return '<section class="pair">' + "".join(
+        f"<figure>{img(root, lang, n, alt)}<figcaption>{cap}</figcaption></figure>" for n, alt, cap in items) + "</section>"
 
 
 def limits(de):
@@ -147,8 +166,8 @@ def limits(de):
 def features(de, root):
     p = root + ("de/" if de else "")
     rows = [
-        ("Radar", "Jedes WLAN und Bluetooth-Gerät in Reichweite, nach Signalstärke. Kreis = WLAN, Quadrat = Bluetooth, Farbe = Art.",
-         "Every Wi-Fi network and Bluetooth device in range, by signal strength. Circle = Wi-Fi, square = Bluetooth, colour = kind.", None),
+        ("Karte und Radar" if de else "Map and radar", "Jedes WLAN und Bluetooth-Gerät in Reichweite. Beim Fahren schätzt Funkblick, wo ein Gerät steht, und zeigt es auf einer Karte aus OpenStreetMap.",
+         "Every Wi-Fi network and Bluetooth device in range. While you drive, Funkblick estimates where a device sits and puts it on an OpenStreetMap map.", None),
         ("Tracker-Schutz" if de else "Tracker protection", "AirTag, SmartTag, Tile, Chipolo, Google „Mein Gerät finden“, Pebblebee. Warnt, wenn einer über 10 Minuten bei dir ist.",
          "AirTag, SmartTag, Tile, Chipolo, Google Find My, Pebblebee. Warns when one stays with you for over 10 minutes.", "airtag-finden-android/" if de else "tracker-detector-app/"),
         ("Kameras" if de else "Cameras", "Findet Kameras, die ein eigenes WLAN aufmachen, und Kamera-Hersteller wie Hikvision, EZVIZ oder Ring.",
@@ -157,13 +176,17 @@ def features(de, root):
          "Big numbers, spoken alerts, fixed speed cameras from OpenStreetMap, vehicle routers and possible public safety gear.", "blitzer-app-beifahrer/" if de else "police-detector-app/"),
         ("WLAN-Kanal" if de else "Channel tips", "Zeigt, welcher Kanal bei dir am freiesten ist. EU-Kanäle 1 bis 13, DFS-Hinweis, Tipp für die FRITZ!Box.",
          "Shows which channel is the quietest where you are. EU channels 1 to 13, DFS hints.", "wlan-kanal-fritzbox/" if de else "wifi-analyzer/"),
-        ("Logs und Export" if de else "Logs and export", "Jede Sitzung als JSON auf dem Handy. Export als CSV, JSON oder KI-Bericht zum Einfügen in ChatGPT oder Claude.",
-         "Every session saved as JSON on the phone. Export as CSV, JSON or an AI debrief to paste into ChatGPT or Claude.", None),
+        ("Logs und Export" if de else "Logs and export", "Jede Sitzung als JSON auf dem Handy. Export als CSV, JSON, GPX, GeoJSON oder KI-Bericht zum Einfügen in ChatGPT oder Claude.",
+         "Every session saved as JSON on the phone. Export as CSV, JSON, GPX, GeoJSON or an AI debrief to paste into ChatGPT or Claude.", None),
     ]
-    cards = "".join(
-        f'<div class="card"><h3>{t}</h3><p>{d if de else e}</p>{f"<a href=\"{p}{link}\">{"Mehr dazu" if de else "More"} →</a>" if link else ""}</div>'
+    more = {"airtag-finden-android/": "Tracker finden", "tracker-detector-app/": "Find a tracker",
+            "versteckte-kamera-finden/": "Zimmer prüfen", "hidden-camera-detector/": "Check a room",
+            "blitzer-app-beifahrer/": "Was erlaubt ist", "police-detector-app/": "What it can tell",
+            "wlan-kanal-fritzbox/": "Kanal einstellen", "wifi-analyzer/": "Pick a channel"}
+    items = "".join(
+        f'<div><h3>{t}</h3><p>{d if de else e}</p>{f"<a href=\"{p}{link}\">{more[link]}</a>" if link else ""}</div>'
         for t, d, e, link in rows)
-    return f'<section><h2>{"Was drin ist" if de else "What it does"}</h2><div class="grid">{cards}</div></section>'
+    return f'<section><h2>{"Was drin ist" if de else "What it does"}</h2><div class="spec">{items}</div></section>'
 
 
 INSTALL_EN = [
@@ -267,16 +290,20 @@ def build():
         ("Does it work on GrapheneOS?", "Yes. Funkblick is built as a GrapheneOS app: plain Android APIs, no Google Play services. Location and nearby-devices permission are enough, a setup checklist shows what is missing."),
         ("Is it an RF scanner app?", "For the Wi-Fi and Bluetooth bands, yes: a Wi-Fi scanner (Android 8 and up) and a Bluetooth scanner, Android's own radios, no extra hardware. It can't hear police radio, FM or mobile networks."),
         ("Does my data leave the phone?", "No. Scans, logs and positions stay on the phone. The only network request is the update check against GitHub Releases."),
-        ("Is it a copy of SØPHIA?", f'No, it is an open-source app with similar features and some of its own. See <a href="sophia-alternative/">Funkblick vs. SØPHIA</a>.'),
+        ("Is it a copy of SØPHIA?", f'No, it is an open-source app with similar features and some of its own. See the <a href="sophia-alternative/">comparison</a>.'),
     ], False)
     page("", "en", "Funkblick: Wi-Fi & BLE scanner app with AirTag detector", desc,
          hero("Wi-Fi and Bluetooth radar for Android",
+              "See every network and device nearby, and know which one follows you.",
               "Funkblick is a Wi-Fi/Bluetooth scanner and BLE scanner app: it shows every network and Bluetooth device your phone can hear, says who made it and what it probably is, and speaks up when something deserves attention: "
               "a tracker that has been with you for ten minutes, a camera running its own Wi-Fi, a speed camera ahead. No root, no account, open source.",
-              False, "", "en", [1, 2, 4], ["Funkblick radar with Wi-Fi networks and Bluetooth devices around a phone",
-                                         "Notable devices: an AirTag away from its owner, a SmartTag, a body cam maker",
-                                         "Car mode: speed, a speed camera 344 m ahead, counters and spoken alerts"])
-         + features(False, "") + limits(False)
+              False, "", "en", 1, "Funkblick map during a demo drive through Hamburg: the route, devices placed along it and a tracker warning")
+         + features(False, "")
+         + pair("", "en", [(5, "Car mode: 48 km/h, a 50 speed camera 350 m ahead, counters for public safety gear, routers, followers and trackers",
+                            "Car mode, for the passenger: speed, the next fixed speed camera and spoken alerts."),
+                           (6, "Discreet mode: a plain light street map with only your own position",
+                            "Discreet mode: an ordinary light map, no radar, alerts only as sound. Three taps end it.")])
+         + limits(False)
          + f'<section><h2>Install</h2>{steps}</section>' + f,
          [app_schema("en", desc), hs, fs], {"de": "de/"})
 
@@ -291,12 +318,16 @@ def build():
     ], True)
     page("de/", "de", "WLAN-Scanner & Bluetooth-Scanner-App mit Tracker-Warnung", desc,
          hero("WLAN- und Bluetooth-Radar fürs Handy",
+              "Zeigt jedes Netz und Gerät in der Nähe und was dir folgt.",
               "Funkblick ist eine WLAN-Scanner-App und ein BLE-Scanner fürs Handy: Sie zeigt jedes WLAN und jedes Bluetooth-Gerät, das dein Handy hört, sagt, wer es gebaut hat und was es vermutlich ist, und meldet sich, wenn es wichtig wird: "
               "ein Tracker, der seit zehn Minuten mitfährt, eine Kamera mit eigenem WLAN, ein Blitzer voraus. Ohne Root, ohne Konto, Open Source.",
-              True, "../", "de", [1, 2, 4], ["Funkblick-Radar mit WLANs und Bluetooth-Geräten um das Handy",
-                                             "Auffällige Geräte: ein vom Besitzer getrennter AirTag, ein SmartTag, ein Bodycam-Hersteller",
-                                             "Auto-Modus: Tempo, Blitzer in 344 m, Zähler und Ansagen"])
-         + features(True, "../") + limits(True)
+              True, "../", "de", 1, "Funkblick-Karte auf einer Demo-Fahrt durch Hamburg: Route, Geräte entlang der Strecke und eine Tracker-Warnung")
+         + features(True, "../")
+         + pair("../", "de", [(5, "Auto-Modus: 48 km/h, 50er-Blitzer in 350 m, Zähler für Behördentechnik, Router, Verfolger und Tracker",
+                              "Auto-Modus für Beifahrer: Tempo, der nächste feste Blitzer und Ansagen."),
+                             (6, "Diskret-Modus: eine helle Straßenkarte, nur mit dem eigenen Standort",
+                              "Diskret-Modus: eine gewöhnliche helle Karte ohne Radar, Meldungen nur als Ton. Dreimal tippen beendet ihn.")])
+         + limits(True)
          + f'<section><h2>Installieren</h2>{steps}</section>' + f,
          [app_schema("de", desc), hs, fs], {"en": ""})
 
@@ -311,12 +342,12 @@ def build():
     ], False)
     page("tracker-detector-app/", "en", "AirTag detector for Android: tracker detector app", desc,
          hero("AirTag detector for Android",
+              "Warns when a tracker that left its owner stays with you.",
               "Funkblick is an AirTag detector (Android, no iPhone needed) and a Bluetooth tracker detector. It recognises AirTags and other Find My accessories, Samsung SmartTags, Tile, Chipolo, Pebblebee and tags in Google's Find My network. "
               "It tells a tag next to its owner from one that is on its own, and warns once a separated tag has been with you for ten minutes.",
-              False, "../", "en", [2, 3], ["AirTag marked as separated for 14 minutes in the list of notable devices",
-                                           "Detail page of an AirTag: Bluetooth company id 0x004C and the Find My payload as evidence"])
-         + '<section><h2>How it tells trackers apart</h2><div class="grid">'
-         + "".join(f'<div class="card"><h3>{n}</h3><p>{t}</p></div>' for n, t in [
+              False, "../", "en", 3, "List of notable devices: an AirTag away from its owner for 14 minutes, a Samsung SmartTag, a Tile")
+         + '<section><h2>How it tells trackers apart</h2><div class="spec two">'
+         + "".join(f'<div><h3>{n}</h3><p>{t}</p></div>' for n, t in [
              ("Apple Find My", "Company id 0x004C, message type 0x12. A long key means the tag is away from its owner. Status bits separate AirTag, AirPods and third-party Find My tags."),
              ("Samsung SmartTag", "Service 0xFD5A. The low bits of the first byte say whether the tag is connected to its phone or offline."),
              ("Google Find My", "Service 0xFEAA with frame type 0x40 or 0x41. 0x41 is the unwanted-tracking mode a tag enters when it is away from its owner."),
@@ -327,8 +358,8 @@ def build():
     desc = "AirTag oder anderen Tracker mit Android finden: Funkblick erkennt AirTag, SmartTag, Tile und Google-Tracker und warnt, wenn einer dir folgt."
     steps, hs = howto("Einen fremden AirTag finden: Android-Anleitung", [
         "Funkblick öffnen und <b>Scan starten</b>. Tracker-Schutz ist von Anfang an an.",
-        "Liste → Filter <b>Tracker</b>. Ein roter Hinweis <b>getrennt</b> heißt: der Tracker ist nicht bei seinem Besitzer.",
-        "Tracker antippen → <b>Peilen</b>. Langsam Taschen, Jacke, Rucksack oder Auto absuchen: die Zahl steigt und es piept schneller, je näher du kommst.",
+        "In der Liste den Filter <b>Tracker</b> wählen. Ein roter Hinweis <b>getrennt</b> heißt: der Tracker ist nicht bei seinem Besitzer.",
+        "Den Tracker antippen, dann <b>Peilen</b>. Langsam Taschen, Jacke, Rucksack oder Auto absuchen: die Zahl steigt und es piept schneller, je näher du kommst.",
         "Gefunden? Behalten, nicht wegwerfen: es ist ein Beweismittel. Bei Bedrohung die Polizei rufen (110).",
     ])
     f, fs = faq([
@@ -341,10 +372,10 @@ def build():
     ], True)
     page("de/airtag-finden-android/", "de", "AirTag mit Android finden: fremden AirTag aufspüren", desc,
          hero("AirTag mit Android finden",
+              "Warnt, wenn ein fremder Tracker über zehn Minuten bei dir bleibt.",
               "Wer nach „AirTag Android“ oder „Tracker App Android“ sucht, landet meist bei Apples Tracker Detect, die nur sucht, wenn man sie antippt. Funkblick läuft im Hintergrund weiter und erkennt AirTags und andere Find-My-Tracker, Samsung SmartTags, Tile, Chipolo, Pebblebee und Tracker im Google-Netz „Mein Gerät finden“. "
               "Es unterscheidet einen Tracker neben seinem Besitzer von einem, der allein unterwegs ist, und warnt, sobald so einer zehn Minuten bei dir ist.",
-              True, "../../", "de", [2, 3], ["Ein AirTag, seit 14 Minuten getrennt vom Besitzer, in der Liste auffälliger Geräte",
-                                              "Detailseite eines AirTags: Bluetooth-Firmenkennung 0x004C und Find-My-Daten als Begründung"])
+              True, "../../", "de", 3, "Liste auffälliger Geräte: ein AirTag seit 14 Minuten ohne Besitzer, ein Samsung SmartTag, ein Tile")
          + f'<section><h2>AirTag finden: Android statt iPhone</h2>{steps}</section>' + limits(True) + f,
          [app_schema("de", desc), hs, fs], {"en": "tracker-detector-app/"})
 
@@ -352,7 +383,7 @@ def build():
     desc = "Hidden camera detector for Android that checks Wi-Fi and Bluetooth, honest about what a phone can and can't find. Free, open source."
     steps, hs = howto("Check a holiday flat for cameras", [
         "Start the scan in the flat and leave it running for two minutes.",
-        "List → filter <b>Camera</b>. Pink entries are camera makers (Hikvision, Dahua, EZVIZ, Ring, Arlo …) or Wi-Fi names cameras use in setup mode (V380, IPC, LookCam …).",
+        "In the list, pick the filter <b>Camera</b>. Pink entries are camera makers (Hikvision, Dahua, EZVIZ, Ring, Arlo …) or Wi-Fi names cameras use in setup mode (V380, IPC, LookCam …).",
         "Walk through the rooms. The strongest signal is usually the closest device.",
         "Also look with your eyes: smoke detectors, chargers and clocks facing the bed or shower.",
     ])
@@ -364,16 +395,17 @@ def build():
     ], False)
     page("hidden-camera-detector/", "en", "Hidden camera detector & finder app for Android", desc,
          hero("Hidden cameras in your Airbnb?",
+              "Funkblick checks the Wi-Fi and Bluetooth around you for camera hardware.",
               "Funkblick is a hidden camera detector app and hidden camera finder for your phone. Many cheap spy cameras open their own Wi-Fi so the owner can set them up, and many security cameras come from a handful of makers. "
               "Funkblick checks both: camera makers from the IEEE registry and Wi-Fi names cameras typically use, and warns as soon as one shows up.",
-              False, "../", "en", [2], ["List of notable devices with a camera running its own Wi-Fi (V380)"])
+              False, "../", "en", 3, "List of notable devices; at the bottom a camera running its own open Wi-Fi (V380)")
          + f'<section><h2>Check a room in five minutes</h2>{steps}</section>' + limits(False) + f,
          [app_schema("en", desc), hs, fs], {"de": "de/versteckte-kamera-finden/"})
 
     desc = "Versteckte Kamera finden mit dem Handy: Funkblick prüft WLAN und Bluetooth auf Kamera-Hersteller und Kamera-Netze. Kostenlos, ohne Werbung."
     steps, hs = howto("Ferienwohnung auf Kameras prüfen", [
         "In der Wohnung den Scan starten und zwei Minuten laufen lassen.",
-        "Liste → Filter <b>Kamera</b>. Rosa Einträge sind Kamera-Hersteller (Hikvision, Dahua, EZVIZ, Ring, Arlo …) oder WLAN-Namen, die Kameras beim Einrichten nutzen (V380, IPC, LookCam …).",
+        "In der Liste den Filter <b>Kamera</b> wählen. Rosa Einträge sind Kamera-Hersteller (Hikvision, Dahua, EZVIZ, Ring, Arlo …) oder WLAN-Namen, die Kameras beim Einrichten nutzen (V380, IPC, LookCam …).",
         "Durch die Zimmer gehen: das stärkste Signal ist meist das nächste Gerät.",
         "Zusätzlich hinschauen: Rauchmelder, Ladegeräte und Uhren, die aufs Bett oder in die Dusche zeigen.",
     ])
@@ -384,9 +416,10 @@ def build():
     ], True)
     page("de/versteckte-kamera-finden/", "de", "Versteckte Kameras finden mit dem Handy: Kamera-Detektor", desc,
          hero("Kamera in der Ferienwohnung?",
+              "Funkblick prüft WLAN und Bluetooth in der Nähe auf Kamera-Technik.",
               "Funkblick ist eine Kamera-Detektor-App für Android. Vorab: Keine versteckte-Kamera-App findet alles, auch keine Kamera-finden-App aus dem Play Store. Viele billige Mini-Kameras machen ein eigenes WLAN auf, damit man sie einrichten kann, und viele Überwachungskameras kommen von einer Handvoll Hersteller. "
               "Funkblick prüft beides: Kamera-Hersteller aus dem IEEE-Register und typische Kamera-WLAN-Namen, und meldet sich, sobald eine auftaucht.",
-              True, "../../", "de", [2], ["Liste auffälliger Geräte mit einer Kamera, die ein eigenes WLAN aufmacht (V380)"])
+              True, "../../", "de", 3, "Liste auffälliger Geräte; unten eine Kamera mit eigenem offenen WLAN (V380)")
          + f'<section><h2>Zimmer in fünf Minuten prüfen</h2>{steps}</section>' + limits(True) + f,
          [app_schema("de", desc), hs, fs], {"en": "hidden-camera-detector/"})
 
@@ -396,18 +429,25 @@ def build():
         ("Which 2.4 GHz channel is best?", "Usually 1, 6 or 11, because they don't overlap. In Europe 13 is allowed too and often empty. Funkblick weighs the neighbours by signal strength and picks one."),
         ("What is DFS?", "5 GHz channels 52 to 144 are shared with weather and other radar. A router has to listen for a minute before it uses them and must switch away when it hears radar. They are often quiet for exactly that reason."),
     ], False)
+    steps, hs = howto("Change your router's Wi-Fi channel", [
+        "Start the scan in Funkblick and open <b>Wi-Fi channels for your router</b> under More. Best where your Wi-Fi is weak.",
+        "Note the suggestion for 2.4 and 5 GHz.",
+        "Open your router's web page, usually printed on its label, and find the radio or channel settings.",
+        "Enter the channel, save, and check again in Funkblick after a few minutes.",
+    ])
     page("wifi-analyzer/", "en", "Wi-Fi analyzer for Android: find the best Wi-Fi channel", desc,
          hero("Find the best Wi-Fi channel",
+              "Funkblick counts the networks per channel and picks the quietest.",
               "Funkblick is a Wi-Fi analyzer: Android shows it every network in range, and Funkblick counts them per channel, weighs them by signal strength and suggests the quietest 2.4 GHz and 5 GHz channel for your own router.",
-              False, "../", "en", [5], ["Wi-Fi channels: suggestion channel 13 and 40, bar chart of networks per 2.4 GHz channel"])
-         + f,
-         [app_schema("en", desc), fs], {"de": "de/wlan-kanal-fritzbox/"})
+              False, "../", "en", 7, "Wi-Fi channels: suggestion channel 13 and 40, bar chart of networks per 2.4 GHz channel")
+         + f'<section><h2>Set it on your router</h2>{steps}</section>' + f,
+         [app_schema("en", desc), hs, fs], {"de": "de/wlan-kanal-fritzbox/"})
 
     desc = "Besten WLAN-Kanal für die FRITZ!Box finden: Funkblick zählt die Netze pro Kanal und empfiehlt den freiesten Kanal auf 2,4 und 5 GHz."
     steps, hs = howto("WLAN-Kanal der FRITZ!Box ändern", [
-        "In Funkblick den Scan starten und den Tab <b>Kanäle</b> öffnen. Am besten dort, wo das WLAN schwach ist.",
+        "In Funkblick den Scan starten und unter Mehr die <b>WLAN-Kanäle</b> öffnen. Am besten dort, wo das WLAN schwach ist.",
         "Die Empfehlung für 2,4 und 5 GHz merken.",
-        "fritz.box im Browser öffnen → WLAN → Funkkanal → Funkkanal-Einstellungen anpassen.",
+        "fritz.box im Browser öffnen, dann unter WLAN, Funkkanal die Funkkanal-Einstellungen anpassen.",
         "Kanal eintragen, übernehmen, nach ein paar Minuten in Funkblick prüfen.",
     ])
     f, fs = faq([
@@ -418,8 +458,9 @@ def build():
     ], True)
     page("de/wlan-kanal-fritzbox/", "de", "WLAN-Kanal ändern: bester Kanal für die FRITZ!Box", desc,
          hero("WLAN-Kanal ändern, aber welcher?",
+              "Funkblick zählt die Netze pro Kanal und empfiehlt den freiesten.",
               "Funkblick ist eine WLAN-Analyse-App, ein WLAN-Analyzer ohne Werbung, und zeigt dir den besten WLAN-Kanal. Dafür zählt es die Netze um dich herum pro Kanal, gewichtet sie nach Signalstärke und empfiehlt den freiesten Kanal auf 2,4 und 5 GHz. Nach EU-Regeln, also mit Kanal 12 und 13.",
-              True, "../../", "de", [5], ["WLAN-Kanäle: Empfehlung Kanal 13 und 40, Balken mit Netzen pro 2,4-GHz-Kanal"])
+              True, "../../", "de", 7, "WLAN-Kanäle: Empfehlung Kanal 13 und 40, Balken mit Netzen pro 2,4-GHz-Kanal")
          + f'<section><h2>So stellst du ihn ein</h2>{steps}</section>' + f,
          [app_schema("de", desc), hs, fs], {"en": "wifi-analyzer/"})
 
@@ -431,10 +472,11 @@ def build():
         ("Does it hear police radio?", "No. Police radio runs on P25 or TETRA, which phones can't receive."),
     ], False)
     page("police-detector-app/", "en", "Police detector app for Android: what a phone can detect", desc,
-         hero("What can a phone tell about police gear?",
+         hero("What a phone sees of police gear",
+              "Car mode names vehicle routers and body cam makers out loud.",
               "Funkblick's car mode looks for cellular routers built for vehicles and for body cam makers in the Wi-Fi and Bluetooth around you, announces them by voice and counts them on a big screen. "
               "A match only tells you who built the hardware.",
-              False, "../", "en", [4], ["Car mode with speed, speed camera distance, counters for public safety gear, vehicles, trackers and cameras"])
+              False, "../", "en", 5, "Car mode: 48 km/h, a speed camera 350 m ahead, counters for public safety gear, routers, followers and trackers")
          + limits(False) + f,
          [app_schema("en", desc), fs])
 
@@ -448,9 +490,10 @@ def build():
     ], True)
     page("de/blitzer-app-beifahrer/", "de", "Blitzer-App erlaubt? Auto-Modus für Beifahrer", desc,
          hero("Blitzer-App: erlaubt für Beifahrer",
+              "Tempo, feste Blitzer und Fahrzeug-Funk mit Ansage, nur für Beifahrer.",
               "Eine Blitzer-App (Android) mit Beifahrer-Modus: großes Tempo, Abstand zum nächsten festen Blitzer, Zähler für Fahrzeug-Router und mögliche Behördentechnik, alles mit Ansage. "
               "Standardmäßig aus: wer es einschaltet, bestätigt, dass er nicht selbst fährt.",
-              True, "../../", "de", [4], ["Auto-Modus: 48 km/h, Blitzer in 344 m mit 50er-Schild, Zähler und Meldungen"])
+              True, "../../", "de", 5, "Auto-Modus: 48 km/h, Blitzer in 350 m mit 50er-Schild, Zähler und Meldungen")
          + limits(True) + f,
          [app_schema("de", desc), fs])
 
@@ -472,10 +515,11 @@ def build():
         f"<tr><th>{a}</th><td>{b}</td><td>{c}</td></tr>" for a, b, c in rows) + "</tbody></table>"
     page("sophia-alternative/", "en", "Funkblick vs. SØPHIA (Sophia Android): free alternative", desc,
          hero("An open-source alternative to SØPHIA",
+              "Same passive Wi-Fi and Bluetooth scan, free, with the source on GitHub.",
               "SØPHIA is a paid passive Wi-Fi and Bluetooth scanner sold on Gumroad. Funkblick does the same job for free, with the source on GitHub, "
               "and adds tracker protection, speed cameras and channel tips. Comparison based on SØPHIA's product page in November 2026.",
-              False, "../", "en", [1], ["Funkblick radar"])
-         + f'<section><h2>Side by side</h2>{table}</section>',
+              False, "../", "en", 2, "Funkblick radar: Wi-Fi as circles and Bluetooth as squares around the phone, rings in dBm")
+         + f'<section><h2>Side by side</h2>{table}</section>' + limits(False),
          [app_schema("en", desc)])
 
     # ------------------------------------------------------------ sitemap

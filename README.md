@@ -37,13 +37,13 @@ Your phone hears dozens of radios all the time: routers, hotspots, earbuds, watc
 It started as an open-source answer to [SØPHIA Android](https://brickystudios.github.io/funkblick/sophia-alternative/), a paid scanner sold on Gumroad, and grew a few things that matter in Germany: tracker protection, cameras in holiday flats, Wi-Fi channels by EU rules, and a car mode that is honest about § 23 StVO.
 
 <p align="center">
-  <img src="docs/bilder/en-1.jpg" width="200" alt="Radar with Wi-Fi networks as circles and Bluetooth devices as squares, coloured by kind">
-  <img src="docs/bilder/en-2.jpg" width="200" alt="Notable devices: an AirTag away from its owner for 14 minutes, a Samsung SmartTag, a body cam maker">
-  <img src="docs/bilder/en-3.jpg" width="200" alt="Detail of an AirTag with the evidence: Bluetooth company id 0x004C and the Find My payload">
+  <img src="docs/bilder/en-1.jpg" width="200" alt="Map of a demo drive through Hamburg: the route, devices placed along it and a tracker warning">
+  <img src="docs/bilder/en-2.jpg" width="200" alt="Notable devices: an AirTag away from its owner for 14 minutes, a Samsung SmartTag and a Tile">
+  <img src="docs/bilder/en-3.jpg" width="200" alt="Detail of a body cam access point marked probably police, with the evidence behind it">
 </p>
 <p align="center">
-  <img src="docs/bilder/en-4.jpg" width="200" alt="Car mode: 48 km/h, a 50 km/h speed camera 344 m ahead, counters and spoken alerts">
-  <img src="docs/bilder/en-5.jpg" width="200" alt="Wi-Fi channels: suggested channel 13 on 2.4 GHz and 40 on 5 GHz, with a bar chart">
+  <img src="docs/bilder/en-4.jpg" width="200" alt="Car mode: 48 km/h, a 50 km/h speed camera 350 m ahead, counters and spoken alerts">
+  <img src="docs/bilder/en-5.jpg" width="200" alt="Discreet mode: a plain light street map with only your own position">
 </p>
 <p align="center"><sub>Screenshots from the built-in demo with invented surroundings.</sub></p>
 

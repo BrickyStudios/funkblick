@@ -8,17 +8,17 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = join(ROOT, "docs/bilder");
 const shot = (n) => `file://${ROOT}/docs/bilder/app/${n}.png`;
 const pics = [
-  ["en-1.jpg", 1080, 1920, "hoch", "Who is *on air*|around you?", "Wi-Fi and Bluetooth radar for Android. No root, no extra hardware.", "en-1-radar"],
-  ["en-2.jpg", 1080, 1920, "hoch", "Spot the *tracker*|that follows you", "AirTag · SmartTag · Tile · Chipolo · Google Find My", "en-2-notable"],
-  ["en-3.jpg", 1080, 1920, "hoch", "Every call|*explained*", "IEEE maker registry, what the device broadcasts, your own rules", "en-3-device"],
-  ["en-4.jpg", 1080, 1920, "hoch", "*Car* mode", "Speed cameras, vehicle routers, possible police gear. Spoken alerts, passengers only.", "en-4-car"],
-  ["en-5.jpg", 1080, 1920, "hoch", "The *quietest*|channel", "EU Wi-Fi channels 1 to 13, a tip for your router", "en-5-channels"],
-  ["de-1.jpg", 1080, 1920, "hoch", "Wer *funkt*|um dich herum?", "WLAN- und Bluetooth-Radar fürs Handy. Ohne Root, ohne Zusatzgerät.", "de-1-radar"],
-  ["de-2.jpg", 1080, 1920, "hoch", "Erkennt *Tracker*,|die dir folgen", "AirTag · SmartTag · Tile · Chipolo · Google „Mein Gerät finden“", "de-2-notable"],
-  ["de-3.jpg", 1080, 1920, "hoch", "Jede Einordnung|*erklärt*", "IEEE-Herstellerregister, was das Gerät sendet, deine eigenen Regeln", "de-3-device"],
-  ["de-4.jpg", 1080, 1920, "hoch", "*Auto*-Modus", "Blitzer, Fahrzeug-Router, mögliche Polizeitechnik. Mit Ansage, nur für Beifahrer.", "de-4-car"],
-  ["de-5.jpg", 1080, 1920, "hoch", "Der *freieste*|WLAN-Kanal", "EU-Kanäle 1 bis 13, mit Tipp für die FRITZ!Box", "de-5-channels"],
-  ["social-preview.png", 1280, 640, "quer", "Wi-Fi + Bluetooth|*radar* for Android", "Tracker alerts · car mode · GrapheneOS · open source", "en-1-radar"],
+  ["en-1.jpg", 1080, 1920, "hoch", "What is on air|around you", "Wi-Fi and Bluetooth on a map, while you drive", "en-1-map"],
+  ["en-2.jpg", 1080, 1920, "hoch", "The *tracker*|that follows you", "AirTag, SmartTag, Tile, Chipolo, Google Find My", "en-3-notable"],
+  ["en-3.jpg", 1080, 1920, "hoch", "Probably *police*,|with the reason", "Body cam signals, vehicles that come along", "en-4-device"],
+  ["en-4.jpg", 1080, 1920, "hoch", "*Car* mode", "Speed cameras, vehicles, spoken alerts. For passengers.", "en-5-car"],
+  ["en-5.jpg", 1080, 1920, "hoch", "Discreet mode", "An ordinary map. Alerts only in your headphones.", "en-6-discreet"],
+  ["de-1.jpg", 1080, 1920, "hoch", "Was hier|*funkt*", "WLAN und Bluetooth auf der Karte, während du fährst", "de-1-map"],
+  ["de-2.jpg", 1080, 1920, "hoch", "Der *Tracker*,|der dir folgt", "AirTag, SmartTag, Tile, Chipolo, Google", "de-3-notable"],
+  ["de-3.jpg", 1080, 1920, "hoch", "Wahrscheinlich|*Polizei*, mit Grund", "Bodycam-Signale, Autos, die mitfahren", "de-4-device"],
+  ["de-4.jpg", 1080, 1920, "hoch", "*Auto*-Modus", "Blitzer, Fahrzeuge, Ansagen. Für Beifahrer.", "de-5-car"],
+  ["de-5.jpg", 1080, 1920, "hoch", "Diskret-Modus", "Eine normale Karte. Warnungen nur im Kopfhörer.", "de-6-discreet"],
+  ["social-preview.png", 1280, 640, "quer", "Wi-Fi and Bluetooth|on a *map*", "Trackers, cameras, car mode. Android and GrapheneOS.", "en-1-map"],
 ];
 mkdirSync(OUT, { recursive: true });
 const b = await chromium.launch();

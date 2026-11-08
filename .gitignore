@@ -64,3 +64,5 @@ funkblick-*.md
 *.geojson
 .gstack/
 .hallmark/*.json
+.hallmark/shots/
+.hallmark/before/
