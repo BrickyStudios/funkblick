@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Chakra;src:url(../docs/fonts/ChakraPetch-Bold.ttf);font-weight:700}
+@font-face{font-family:Plex;src:url(../docs/fonts/IBMPlexMono-Medium.ttf);font-weight:500}
+:root{--ink:#0D0C0A;--amber:#FFB020;--text:#F2E8D5;--dim:#A39780}
+*{margin:0;box-sizing:border-box}
+html,body{width:var(--w);height:var(--h);overflow:hidden}
+body{background:var(--ink);color:var(--text);font-family:Plex,monospace;position:relative}
+/* radar rings behind everything, faint, like a scope at night */
+body::before{content:"";position:absolute;inset:0;background:
+ radial-gradient(circle at 50% var(--cy),rgba(255,176,32,.16) 0,rgba(255,176,32,.04) 32%,transparent 60%),
+ repeating-radial-gradient(circle at 50% var(--cy),transparent 0 118px,rgba(255,176,32,.09) 119px 120px)}
+body::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 4px);pointer-events:none}
+.wrap{position:relative;z-index:1;height:100%}
+.hoch{display:flex;flex-direction:column;align-items:center;padding-top:140px}
+.brand{font-family:Plex;font-size:30px;letter-spacing:.42em;color:var(--amber)}
+h1{font-family:Chakra;font-weight:700;font-size:108px;line-height:1;letter-spacing:-.01em;text-align:center;margin-top:46px;text-transform:uppercase;text-shadow:0 0 40px rgba(255,176,32,.25)}
+h1 em{font-style:normal;color:var(--amber)}
+.sub{margin-top:36px;font-size:34px;color:var(--dim);text-align:center;max-width:900px;line-height:1.35}
+.phone{margin-top:80px;width:780px;padding:20px 20px 0;border-radius:70px 70px 0 0;background:#050504;box-shadow:0 0 0 3px #2a251c,0 0 120px rgba(255,176,32,.18)}
+.phone img{display:block;width:100%;border-radius:50px 50px 0 0}
+.quer{display:grid;grid-template-columns:1fr 400px;grid-template-rows:640px;gap:56px;height:100%;padding:0 70px 0 80px;align-items:center}
+.quer .brand{font-size:24px}
+.quer h1{text-align:left;font-size:66px;margin-top:26px}
+.quer .sub{text-align:left;font-size:21px;margin-top:26px;max-width:none}
+.quer .url{margin-top:30px;font-size:20px;color:var(--amber)}
+.quer .phone{width:400px;margin-top:110px;padding:12px 12px 0;border-radius:44px 44px 0 0;align-self:start}
+.quer .phone img{border-radius:34px 34px 0 0}
+</style></head><body><div class="wrap" id="w"></div><script>
+const q=new URLSearchParams(location.search), s=document.documentElement.style;
+s.setProperty("--w",q.get("w")+"px");s.setProperty("--h",q.get("h")+"px");s.setProperty("--cy",q.get("art")==="quer"?"60%":"72%");
+const t=q.get("t").replace("|","<br>").replace(/\*(.+?)\*/g,"<em>$1</em>");
+document.getElementById("w").innerHTML=q.get("art")==="quer"
+ ?`<div class="quer"><div><div class="brand">FUNKBLICK</div><h1>${t}</h1><div class="sub">${q.get("s")}</div><div class="url">github.com/BrickyStudios/funkblick</div></div><div class="phone"><img src="${q.get("img")}"></div></div>`
+ :`<div class="hoch"><div class="brand">FUNKBLICK</div><h1>${t}</h1><div class="sub">${q.get("s")}</div><div class="phone"><img src="${q.get("img")}"></div></div>`;
+</script></body></html>

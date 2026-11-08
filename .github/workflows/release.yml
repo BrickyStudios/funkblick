@@ -1,0 +1,75 @@
+name: Build & Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version tag (e.g. v1.2.0)'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write # create the GitHub release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "value=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode Keystore
+        run: |
+          test -n "${{ secrets.KEYSTORE_BASE64 }}" || { echo "KEYSTORE_BASE64 secret missing"; exit 1; }
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/release.jks
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+        env:
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+
+      - name: Rename APK
+        run: |
+          # same name in every release, so releases/latest/download/Funkblick.apk always works
+          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/Funkblick.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.value }}
+          name: Funkblick ${{ steps.tag.outputs.value }}
+          body: |
+            Download `Funkblick.apk` below and install it (Android 8.0 or newer, runs on GrapheneOS without Google services).
+            Funkblick checks GitHub for new versions on start and installs them with one tap. Obtainium works too.
+
+            Lade `Funkblick.apk` herunter und installiere sie (Android 8.0 oder neuer, läuft auf GrapheneOS ohne Google-Dienste).
+          files: app/build/outputs/apk/release/Funkblick.apk
+          draft: false
+          prerelease: false
