@@ -6,6 +6,8 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import io.github.brickystudios.funkblick.BuildConfig
 import io.github.brickystudios.funkblick.core.Alert
+import io.github.brickystudios.funkblick.core.AlertReason
+import io.github.brickystudios.funkblick.core.HomeWatch
 import io.github.brickystudios.funkblick.core.Category
 import io.github.brickystudios.funkblick.core.isFollowingVehicle
 import io.github.brickystudios.funkblick.core.AlertSettings
@@ -90,6 +92,11 @@ object Funk {
 
     lateinit var session: Session
         private set
+
+    /** Home watch for the More page: how many devices it knows, minutes still learning, are you there, how many new ones. */
+    data class HomeState(val known: Int, val learningMin: Int, val there: Boolean, val new: Int)
+    val home = MutableStateFlow<HomeState?>(null)
+    private var savedHome: HomeWatch? = null
     private val _devices = MutableStateFlow<List<Device>>(emptyList())
     val devices: StateFlow<List<Device>> = _devices.asStateFlow()
     private val _alerts = MutableStateFlow<List<LoggedAlert>>(emptyList())
@@ -120,9 +127,10 @@ object Funk {
         classifier = Classifier(oui)
         session = Session(classifier)
         loadSpeedCams()
-        trafficCams = SpeedCamDb(app.assets.open("trafficcams.tsv").bufferedReader().readLines().asSequence())
         val prefs = prefs()
         prefs.getString("settings", null)?.let { s -> runCatching { gson.fromJson(s, Settings::class.java) }.getOrNull()?.let { _settings.value = it } }
+        // the place is a handful of Wi-Fi ids, no coordinates; it stays in the app's own storage and never goes into a log
+        prefs.getString("home", null)?.let { s -> runCatching { gson.fromJson(s, HomeWatch::class.java) }.getOrNull()?.let { session.home = it; savedHome = it } }
         prefs.getString("rules", null)?.let { s ->
             runCatching { gson.fromJson<List<Rule>>(s, object : TypeToken<List<Rule>>() {}.type) }.getOrNull()?.let { _rules.value = it }
         }
@@ -134,12 +142,47 @@ object Funk {
 
     private fun localCams() = File(app.filesDir, "speedcams-local.tsv")
 
-    /** Bundled cameras plus the ones refreshed for your region. */
+    private fun latestCams(name: String) = File(app.filesDir, "$name-latest.tsv")
+
+    /** The whole-Germany file: the weekly download if it was made by this app version, else the one in the APK. */
+    private fun camLines(name: String): List<String> =
+        latestCams(name).takeIf { it.exists() && prefs().getInt("camDataVersion", 0) == BuildConfig.VERSION_CODE }?.readLines()
+            ?: app.assets.open("$name.tsv").bufferedReader().readLines()
+
+    /** Speed cameras (whole Germany plus the ones refreshed for your region), traffic cameras and counters. */
     private fun loadSpeedCams() {
-        val bundled = app.assets.open("speedcams.tsv").bufferedReader().readLines()
         val local = localCams().takeIf { it.exists() }?.readLines() ?: emptyList()
-        speedCams = SpeedCamDb((local + bundled).asSequence())
+        speedCams = SpeedCamDb((local + camLines("speedcams")).asSequence())
+        trafficCams = SpeedCamDb(camLines("trafficcams").asSequence())
     }
+
+    /**
+     * Once a week: the camera files from the repo, which a GitHub Action rebuilds from OpenStreetMap every Monday
+     * (.github/workflows/data.yml). Everyone gets the same file for all of Germany, so no position leaves the phone.
+     */
+    suspend fun refreshCameraData() = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val p = prefs()
+        val now = System.currentTimeMillis()
+        val sameApp = p.getInt("camDataVersion", 0) == BuildConfig.VERSION_CODE
+        if (sameApp && now - p.getLong("camDataChecked", 0) < 7 * 24 * 3_600_000L) return@withContext
+        var got = 0
+        for (name in listOf("speedcams", "trafficcams")) runCatching {
+            val c = (java.net.URL("$CAM_DATA/$name.tsv").openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 15_000; readTimeout = 60_000
+                setRequestProperty("User-Agent", "Funkblick/${BuildConfig.VERSION_NAME} (github.com/BrickyStudios/funkblick)")
+            }
+            val text = if (c.responseCode == 200) c.inputStream.bufferedReader().use { it.readText() } else return@runCatching
+            if (SpeedCamDb(text.lineSequence()).size < 1000) return@runCatching // a broken file never replaces a good one
+            latestCams(name).writeText(text)
+            got++
+        }
+        if (got == 2) { // offline or a half answer: try again at the next start
+            p.edit().putInt("camDataVersion", BuildConfig.VERSION_CODE).putLong("camDataChecked", now).apply()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { loadSpeedCams() }
+        }
+    }
+
+    private val CAM_DATA = "https://raw.githubusercontent.com/BrickyStudios/funkblick/main/app/src/main/assets"
 
     fun speedCamsUpdated(): Long = localCams().takeIf { it.exists() }?.lastModified() ?: 0L
 
@@ -186,14 +229,32 @@ object Funk {
 
     fun publish() {
         _devices.value = session.devices.values.toList()
+        val now = System.currentTimeMillis()
+        home.value = session.home?.let { h ->
+            HomeState(h.known.size, if (now < h.learnUntil) ((h.learnUntil - now + 59_999) / 60_000).toInt() else 0, running.value && session.atHome, session.newAtHome.size)
+        }
     }
 
-    fun logAlert(kind: String, text: String, address: String?) {
-        val f = fix.value
+    /** Remembers the place you are at now. False when no Wi-Fi is in range to recognise it by. */
+    fun markHome(): Boolean = (session.markHome() != null).also { saveHome(); publish() }
+
+    fun acceptNewAtHome() { session.acceptNewAtHome(); saveHome(); publish() }
+
+    fun forgetHome() { session.home = null; saveHome(); publish() }
+
+    private fun saveHome() {
+        if (session.home == savedHome) return
+        savedHome = session.home
+        prefs().edit().putString("home", session.home?.let(gson::toJson)).apply()
+    }
+
+    /** where = false: no position with the alert, so a shared log doesn't point at your saved place. */
+    fun logAlert(kind: String, text: String, address: String?, where: Boolean = true) {
+        val f = fix.value?.takeIf { where }
         _alerts.update { (listOf(LoggedAlert(System.currentTimeMillis(), kind, text, address, f?.lat, f?.lon)) + it).take(200) }
     }
 
-    fun logAlert(a: Alert) = logAlert(a.reason.kind(), a.reason.label(), a.device.address)
+    fun logAlert(a: Alert) = logAlert(a.reason.kind(), a.reason.label(), a.device.address, where = a.reason != AlertReason.HOME_NEW)
 
     fun newSession() {
         session.clear()
@@ -259,7 +320,7 @@ object Funk {
 
     /** Writes the current session to logs/; called every minute while scanning and on stop. */
     fun saveLog() {
-        if (!demo.value) rememberSeen()
+        if (!demo.value) { rememberSeen(); saveHome() }
         if (!_settings.value.log || demo.value || session.devices.isEmpty()) return
         val f = logFile ?: File(logDir(), "funkblick-" + SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.ROOT).format(Date(session.startedAt)) + ".json").also { logFile = it }
         val tmp = File(f.path + ".tmp")

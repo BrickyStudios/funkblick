@@ -40,6 +40,7 @@ fun AlertReason.kind(): String = when (this) {
     AlertReason.CAMERA -> "camera"
     AlertReason.FLEET -> "fleet"
     AlertReason.VEHICLE_FOLLOWING -> "follow"
+    AlertReason.HOME_NEW -> "home"
 }
 
 data class ExportMeta(val app: String, val build: String, val android: String, val startedAt: Long, val exportedAt: Long, val safe: Boolean)

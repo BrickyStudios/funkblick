@@ -63,7 +63,7 @@ val NAME_SIGNATURES = listOf(
     Signature(Category.PUBLIC_WIFI, re("^(wifionice|wifi@db|telekom|telekom_fon|eduroam|cdwifi|flixbus.*)$|freifunk|bayernwlan|vodafone (hotspot|homespot)|railnet")) {
         tr("Bekanntes öffentliches WLAN (Bahn, Hotspot, Freifunk, Hochschule)", "Known public Wi-Fi (train, hotspot, Freifunk, university)")
     },
-    Signature(Category.CAMERA, re("^(ipc|ipcam|hik-|ezviz_|tapo_cam|yi_|v380|lookcam|hdlivecam|ipc365|wificam|cam_|reolink|wyze|ring setup|70mai|viofo|blackvue)|camera|_cam\\b")) {
+    Signature(Category.CAMERA, re("^(ipc|ipcam|hik-|ezviz_|tapo_cam|yi_|v380|lookcam|hdlivecam|ipc365|wificam|cam_|reolink|wyze|ring setup|70mai|viofo|blackvue)|camera|_cam\\b|^mv\\d{8}$|^dgk-[a-z0-9]{6}-[a-z0-9]{5}$|^ai_[a-z0-9]{6,12}$")) {
         tr("Name typisch für eine Kamera mit eigenem WLAN", "Name typical of a camera running its own Wi-Fi")
     },
 )

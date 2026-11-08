@@ -7,9 +7,10 @@ en_<kind>.ogg     spoken alert, Piper TTS, voice LJ Speech (public domain)
 
 Needs: piper (pip install piper-tts), ffmpeg, numpy, the two voices in ~/.local/share/piper-voices
 (de_DE-thorsten-high, en_US-ljspeech-high from huggingface.co/rhasspy/piper-voices).
-Run: python3 tools/build_sounds.py
+Run: python3 tools/build_sounds.py [kind ...]   (only the named kinds, e.g. "home")
 """
 import subprocess
+import sys
 import tempfile
 import wave
 from pathlib import Path
@@ -30,6 +31,7 @@ LINES = {
     "follow": ("Achtung. Ein Fahrzeug fährt seit Minuten mit dir.", "Heads up. A vehicle has been with you for minutes."),
     "police": ("Wahrscheinlich Polizei in der Nähe.", "Probably police nearby."),
     "start": ("Funkblick aktiv. Scan läuft.", "Funkblick online. Scanning."),
+    "home": ("Neues Gerät an deinem Ort.", "New device at your place."),
 }
 
 
@@ -95,6 +97,8 @@ TONES = {
     "start": seq((0, tone(300, 0.55, 0.4, "tri", sweep_to=1800)), (0.6, tone(1318, 0.05, 0.02)), (0.68, tone(1568, 0.05, 0.02)),
                  (0.76, tone(1760, 0.05, 0.02)), (0.92, tone(880, 0.12, 0.05)), (1.06, tone(523, 0.5, 0.3, "bell")),
                  (1.06, tone(659, 0.5, 0.3, "bell")), (1.06, tone(784, 0.5, 0.3, "bell"))),
+    # doorbell: two bell tones, high then low: something new at your door
+    "home": seq((0, tone(784, 0.5, 0.3, "bell")), (0.35, tone(622, 0.7, 0.4, "bell"))),
     # scan stop: falling triad
     "stop": seq((0, tone(784, 0.12, 0.06)), (0.09, tone(659, 0.12, 0.06)), (0.18, tone(523, 0.3, 0.15))),
 }
@@ -126,11 +130,16 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
+        only = set(sys.argv[1:])
         for kind, x in TONES.items():
+            if only and kind not in only:
+                continue
             write_wav(tmp / f"{kind}.wav", x)
             ogg(tmp / f"{kind}.wav", OUT / f"tone_{kind}.ogg", "loudnorm=I=-14:TP=-1.5")
         for lang, voice, i in (("de", "de_DE-thorsten-high", 0), ("en", "en_US-ljspeech-high", 1)):
             for kind, texts in LINES.items():
+                if only and kind not in only:
+                    continue
                 raw = tmp / f"{lang}_{kind}.wav"
                 subprocess.run(["piper", "-m", str(VOICES / f"{voice}.onnx"), "-f", str(raw), "--length-scale", "0.92"],
                                input=texts[i].encode(), check=True, capture_output=True)

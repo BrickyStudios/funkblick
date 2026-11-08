@@ -1,5 +1,6 @@
 package io.github.brickystudios.funkblick.ui
 
+import android.widget.Toast
 import android.content.Context
 import android.content.Intent
 import android.location.LocationManager
@@ -78,6 +79,7 @@ fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetu
     val devices by Funk.devices.collectAsStateWithLifecycle()
     val diag by Funk.diag.collectAsStateWithLifecycle()
     val running by Funk.running.collectAsStateWithLifecycle()
+    val home by Funk.home.collectAsStateWithLifecycle()
     var addRule by remember { mutableStateOf(false) }
     var logsVersion by remember { mutableIntStateOf(0) }
     val logs = remember(logsVersion, running) { Funk.logs() }
@@ -106,6 +108,33 @@ fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetu
         Toggle(tr("Im Auto anbieten", "Offer in the car"), tr("Verbindet sich das Handy per Bluetooth mit einem Auto, startet ein Tipp auf die Mitteilung den Auto-Modus. Dazu gibt es eine Kachel in den Schnelleinstellungen.",
             "When the phone connects to a car over Bluetooth, one tap on the notification starts car mode. There is also a quick settings tile."), s.carStart) { v ->
             if (v) onEnableCarStart() else Funk.updateSettings { it.copy(carStart = false) }
+        }
+
+        // plan F3: what's new at your place. The place is its Wi-Fi networks, no coordinates, never in a log or export
+        Header(tr("Heim-Wächter", "Home watch"))
+        Text(tr("Merkt sich, was an einem Ort immer funkt, und meldet dort danach nur Neues: eine Kamera, einen fremden Tracker, ein Gerät direkt bei dir. Auch für die Ferienwohnung. Erkannt wird der Ort an seinen WLANs, gespeichert wird keine Position.",
+            "Learns what always transmits at a place, then reports only what's new there: a camera, a stranger's tracker, a device right next to you. Also for a holiday flat. The place is recognised by its Wi-Fi networks; no position is stored."),
+            color = C.dim, fontSize = 14.sp, lineHeight = 20.sp)
+        val h = home
+        if (h == null) {
+            if (running) BigButton(tr("Diesen Ort merken", "Remember this place"), filled = false) {
+                if (!Funk.markHome()) Toast.makeText(context, tr("Kein WLAN in Reichweite, an dem der Ort zu erkennen wäre.", "No Wi-Fi in range to recognise the place by."), Toast.LENGTH_LONG).show()
+            } else Text(tr("Starte den Scan an dem Ort, den du merken willst.", "Start the scan at the place you want to remember."), color = C.dim, fontSize = 14.sp)
+        } else {
+            val where = when {
+                !running -> tr("Scan aus", "Scan off")
+                h.there -> tr("Du bist dort", "You're there")
+                else -> tr("Nicht am gemerkten Ort", "Not at the saved place")
+            }
+            Text((if (h.known == 1) tr("1 bekanntes Gerät", "1 known device") else tr("${h.known} bekannte Geräte", "${h.known} known devices")) + ". $where." +
+                if (h.learningMin > 0) tr(" Lernt noch ${h.learningMin} min.", " Still learning for ${h.learningMin} min.") else "",
+                color = C.text, fontSize = 15.sp)
+            if (h.new > 0) {
+                Text(tr("${h.new} neu seit dem Merken. Gehört es dir, übernimm es.", "${h.new} new since then. If it's yours, accept it."), color = C.amber, fontSize = 15.sp)
+                BigButton(tr("Als bekannt übernehmen", "Accept as known"), filled = false) { Funk.acceptNewAtHome() }
+            }
+            if (running) TextAction(tr("Ort neu merken", "Remember the place again")) { Funk.markHome() }
+            TextAction(tr("Ort vergessen", "Forget the place"), color = C.red) { Funk.forgetHome() }
         }
 
         Header(tr("Datenschutz", "Privacy"))

@@ -9,7 +9,7 @@ data class AlertSettings(
     val traffic: Boolean = false,
 )
 
-enum class AlertReason { WATCH, TRACKER_FOLLOWING, POLICE_PROBABLE, PRIORITY, CAMERA, FLEET, VEHICLE_FOLLOWING }
+enum class AlertReason { WATCH, TRACKER_FOLLOWING, POLICE_PROBABLE, PRIORITY, CAMERA, FLEET, VEHICLE_FOLLOWING, HOME_NEW }
 
 data class Alert(val device: Device, val reason: AlertReason)
 
@@ -23,6 +23,7 @@ const val VEHICLE_FOLLOW_MS = 4 * 60_000L // a car's Wi-Fi this long behind you,
 const val OWN_WINDOW_MS = 2 * 60_000L // there within the first 2 minutes ...
 const val OWN_RSSI = -55 // ... and this strong: your own car or phone, never a follower
 const val DRIVING_KMH = 8f
+private val HOME_QUIET = setOf(AlertReason.CAMERA, AlertReason.FLEET, AlertReason.PRIORITY)
 const val CAMERA_DRIVING_MS = 60_000L // driving, a camera has to stay this long: house cameras by the road pass in seconds
 
 /**
@@ -43,9 +44,17 @@ class Session(private val classifier: Classifier, private val now: () -> Long = 
     var startedAt = now()
         private set
 
+    /** Home watch (Home.kt): set by the store, kept across sessions. */
+    var home: HomeWatch? = null
+    private var homeSeen = Long.MIN_VALUE / 2 // when an anchor network was last heard
+    /** What was new at your place this session and got reported; "accept" moves it into the known set. */
+    val newAtHome = LinkedHashSet<String>()
+    val atHome: Boolean get() = home != null && now() - homeSeen <= HOME_PRESENT_MS
+
     fun clear() {
         devices.clear(); lastObservation.clear(); streakStart.clear(); lastAlert.clear(); lastSighting.clear(); places.clear(); readings.clear()
         startedAt = now()
+        homeSeen = Long.MIN_VALUE / 2; newAtHome.clear()
     }
 
     /** lat/lon: where the phone was, if GPS knows. With places, a tracker must follow you somewhere to count. */
@@ -80,7 +89,18 @@ class Session(private val classifier: Classifier, private val now: () -> Long = 
         if (prevObs == null || s.timeMs - prevObs > GAP_MS) streakStart[id] = s.timeMs
 
         val fresh = now() - s.timeMs <= FRESH_MS
-        val reason = reasonFor(withPolice, settings, s.timeMs - (streakStart[id] ?: s.timeMs), (speedKmh ?: 0f) > DRIVING_KMH)
+        val streakMs = s.timeMs - (streakStart[id] ?: s.timeMs)
+        var reason = reasonFor(withPolice, settings, streakMs, (speedKmh ?: 0f) > DRIVING_KMH)
+        home?.let { h ->
+            if (id in h.anchors) homeSeen = maxOf(homeSeen, s.timeMs)
+            if (!atHome) return@let
+            val learning = now() < h.learnUntil
+            if (learning && (withPolice.fixedAddress() || withPolice.cls.tracker != null)) home = h.copy(known = h.known + id)
+            // at your place, what was always there doesn't ring again: your own camera, the router across the road
+            if (id in home!!.known) { if (reason in HOME_QUIET) reason = null; return@let }
+            // new here: listed for "accept as known"; a camera keeps its own, more specific alert
+            if (fresh && id !in newAtHome && withPolice.newAtHomeMatters(streakMs)) { newAtHome += id; if (reason == null) reason = AlertReason.HOME_NEW }
+        }
         if (!fresh || reason == null) return null
         val key = "$id/$reason"
         if ((lastAlert[key] ?: Long.MIN_VALUE / 2) + COOLDOWN_MS > now()) return null
@@ -102,6 +122,22 @@ class Session(private val classifier: Classifier, private val now: () -> Long = 
         if (settings.traffic && d.isFollowingVehicle(streakMs)) return AlertReason.VEHICLE_FOLLOWING
         if (settings.traffic && c.category == Category.FLEET) return AlertReason.FLEET
         return null
+    }
+
+    /** Remember this place by its strongest Wi-Fi and learn what is there for the next ten minutes. Null without Wi-Fi in range. */
+    fun markHome(): HomeWatch? {
+        val t = now()
+        val anchors = homeAnchors(devices.values, t).ifEmpty { return null }
+        homeSeen = t
+        newAtHome.clear()
+        val known = devices.values.filter { t - it.lastSeen < HOME_LEARN_MS && (it.fixedAddress() || it.cls.tracker != null) }.map { it.id }.toSet()
+        return HomeWatch(anchors, known, t + HOME_LEARN_MS).also { home = it }
+    }
+
+    /** What was reported as new is yours after all: from now on it counts as known. */
+    fun acceptNewAtHome() {
+        home = home?.let { it.copy(known = it.known + newAtHome) }
+        newAtHome.clear()
     }
 
     /** Re-run classification after the rules changed, so watch/mute show up without waiting for the next scan. */
@@ -135,5 +171,6 @@ fun AlertReason.label(): String = when (this) {
     AlertReason.PRIORITY -> tr("Mögliche Behörden-/Einsatztechnik in der Nähe", "Possible public safety gear nearby")
     AlertReason.VEHICLE_FOLLOWING -> tr("Ein Fahrzeug fährt seit Minuten mit dir", "A vehicle has been with you for minutes")
     AlertReason.CAMERA -> tr("Kamera in der Nähe", "Camera nearby")
+    AlertReason.HOME_NEW -> tr("Neu an deinem gemerkten Ort", "New at your saved place")
     AlertReason.FLEET -> tr("Fahrzeug-/Mobilfunkrouter in der Nähe", "Vehicle / cellular router nearby")
 }

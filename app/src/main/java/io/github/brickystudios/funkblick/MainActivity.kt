@@ -1,5 +1,7 @@
 package io.github.brickystudios.funkblick
 
+import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -134,6 +136,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge(SystemBarStyle.dark(C.ink.toArgb()), SystemBarStyle.dark(C.ink.toArgb()))
         super.onCreate(savedInstanceState)
         Funk.init(this)
+        lifecycleScope.launch { Funk.refreshCameraData() } // weekly, whole Germany, no position sent
         if (savedInstanceState == null) handle(intent)
         setContent {
             FunkTheme {
