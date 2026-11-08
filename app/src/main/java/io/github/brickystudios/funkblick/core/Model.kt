@@ -58,6 +58,7 @@ data class Classification(
     val evidence: List<Evidence>,
     val watch: Rule?,
     val mute: Rule?,
+    val police: Rule? = null, // marked as police by you
 )
 
 /** Everything Funkblick knows about one transmitter during this session. */

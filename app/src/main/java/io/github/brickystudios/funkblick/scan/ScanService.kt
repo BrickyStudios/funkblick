@@ -241,7 +241,7 @@ class ScanService : Service() {
         for (u in TRACKER_SERVICE_UUIDS) list += ScanFilter.Builder().setServiceData(ParcelUuid(uuid16(u)), ByteArray(0)).build()
         TRACKER_SERVICE_UUIDS.forEach { list += ScanFilter.Builder().setServiceUuid(ParcelUuid(uuid16(it))).build() }
         // shortcut: only exact addresses survive screen-off; name and maker rules need the screen on
-        for (r in Funk.rules.value) if (r.kind == RuleKind.WATCH && r.field == RuleField.ADDRESS) hexOf(r.value)?.let { h ->
+        for (r in Funk.rules.value) if (r.kind != RuleKind.MUTE && r.field == RuleField.ADDRESS) hexOf(r.value)?.let { h ->
             list += ScanFilter.Builder().setDeviceAddress(h.chunked(2).joinToString(":")).build()
         }
         return list

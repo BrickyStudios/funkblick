@@ -1,10 +1,11 @@
 package io.github.brickystudios.funkblick.core
 
-enum class RuleKind { WATCH, MUTE }
+/** POLICE: you saw it was police; from then on that device counts as "probably police" (plan C). */
+enum class RuleKind { WATCH, MUTE, POLICE }
 
 enum class RuleField { ADDRESS, PREFIX, NAME_EXACT, NAME_CONTAINS, VENDOR }
 
-/** A user's own watch or mute rule. Stored on the phone only (scan/Store.kt). */
+/** A user's own watch, mute or police rule. Stored on the phone only (scan/Store.kt). */
 data class Rule(
     val kind: RuleKind,
     val field: RuleField,
@@ -29,6 +30,12 @@ fun Rule.matches(s: Sighting, vendor: String?): Boolean {
         RuleField.NAME_CONTAINS -> s.name?.contains(v, ignoreCase = true) == true
         RuleField.VENDOR -> vendor?.contains(v, ignoreCase = true) == true
     }
+}
+
+fun RuleKind.label(): String = when (this) {
+    RuleKind.WATCH -> tr("Beobachten", "Watch")
+    RuleKind.MUTE -> tr("Stumm", "Mute")
+    RuleKind.POLICE -> tr("Polizei", "Police")
 }
 
 fun RuleField.label(): String = when (this) {

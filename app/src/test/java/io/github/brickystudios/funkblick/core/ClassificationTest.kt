@@ -371,6 +371,22 @@ class PoliceTest {
         assertNull(policeFor(ford, emptyList(), 48.1, 11.5)) // Munich: the NRW fleet rule doesn't hold
     }
 
+    @Test fun aDeviceYouMarkedIsProbablyPolice() {
+        val session = Session(Classifier(realOui)) { clock }
+        val van = { t: Long -> Sighting(Radio.WIFI, "3A:00:00:00:00:2F", "DIRECT-MB Hotspot 1022", -75, t, 2437, Security.WPA2) }
+        assertNull(session.add(van(clock), emptyList(), traffic, 51.50, 7.47))
+        val mark = listOf(Rule(RuleKind.POLICE, RuleField.ADDRESS, "3A:00:00:00:00:2F"))
+        session.reclassify(mark)
+        assertEquals(PoliceLevel.PROBABLE, session.devices.values.single().police?.level) // at once, not only at the next scan
+        clock += 60_000
+        assertEquals(AlertReason.POLICE_PROBABLE, session.add(van(clock), mark, traffic, 51.50, 7.47)?.reason)
+        assertNull(session.add(van(clock + 1), mark, AlertSettings(), 51.50, 7.47)) // alerts only with traffic alerts on
+        session.reclassify(mark + Rule(RuleKind.MUTE, RuleField.NAME_CONTAINS, "MB Hotspot"))
+        assertNull(session.devices.values.single().police) // mute wins
+        session.reclassify(emptyList())
+        assertNull(session.devices.values.single().police) // deleting the mark takes it back
+    }
+
     @Test fun anOrdinaryCarIsNothing() {
         val session = Session(Classifier(realOui)) { clock }
         clock += 3 * 60_000

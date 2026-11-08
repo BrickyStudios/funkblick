@@ -63,7 +63,7 @@ Android 8.0 or newer on a 64-bit ARM phone. No Google Play services needed, so i
 | **Maker lookup** | 54,000 prefixes from the IEEE registry (MA-L /24, MA-M /28, MA-S /36, longest wins), plus Bluetooth company ids. Random addresses are marked as random instead of guessed. |
 | **Categories** | Tracker, possible public safety gear, camera, vehicle/cellular router, car (infotainment Wi-Fi like "My VW 1013" or "Audi_MMI"), public Wi-Fi, business network, home router, phone/watch/headphones, unknown. Each with the evidence behind it: registry, maker signature, payload, name, your rule. |
 | **Map** | OpenStreetMap vector map (OpenFreeMap, MapLibre) in the night palette: your track, fixed speed cameras, alerts and where fixed devices probably are, estimated from signal strength along the way. Bundled into numbers until you zoom into a street. The area around you can be saved for offline use. |
-| **Probably police** | Evidence instead of a hunch: Axon gear over Bluetooth (NRW police wear Axon body cams), a vehicle that comes along while public safety gear is in range, a following Ford or Mercedes in NRW (the patrol fleet) as "possible". Vehicles, routers and tags seen on an earlier day are recognised ("seen before on 08.11."). |
+| **Probably police** | Evidence instead of a hunch: Axon gear over Bluetooth (NRW police wear Axon body cams), a vehicle that comes along while public safety gear is in range, a following Ford or Mercedes in NRW (the patrol fleet) as "possible". Saw it was police? "Mark as police" on the device, and from then on it counts as probably police. Vehicles, routers and tags seen on an earlier day are recognised ("seen before on 08.11."). |
 | **Discreet mode** | A light, ordinary-looking map with only your position. No radar, no colours, notifications say only "Funkblick", alerts come through headphones. Tap three times to leave. |
 | **Rules** | Watch or mute by address, maker prefix, exact name, name contains, maker contains. Mute always wins. Stored on the phone. |
 | **Alerts** | Own signal per kind plus a spoken line (Piper TTS, English and German). Only fresh sightings ring, cached scan results never do, 5 minutes cooldown per device. Music ducks like it does for navigation. |
@@ -113,7 +113,7 @@ Funkblick does not show up on the Android Auto screen yet. Android Auto only run
 
 ## Roadmap
 
-Done in 1.1 to 1.5: find mode, the tracker rule with places, quick settings tile and car start, speed camera refresh, the setup checklist, logs to Downloads, the car category, vehicles that follow you, the map with device positions, probably police, discreet mode, GPX/GeoJSON, a calmer design with three tabs, the trip review, the web log viewer.
+Done in 1.1 to 1.5: find mode, the tracker rule with places, quick settings tile and car start, speed camera refresh, the setup checklist, logs to Downloads, the car category, vehicles that follow you, the map with device positions, probably police, discreet mode, GPX/GeoJSON, a calmer design with three tabs, the trip review, the web log viewer, marking a device as police.
 
 Next:
 1. **Home watcher**: a new camera, tracker or strong device at home gets a notice.

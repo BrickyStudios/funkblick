@@ -120,9 +120,10 @@ fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetu
         Toggle("Bluetooth", tr("Aus = nur WLAN, spart Akku", "Off = Wi-Fi only, saves battery"), s.ble) { v -> Funk.updateSettings { it.copy(ble = v) } }
 
         Header(tr("Eigene Regeln", "Your rules"), trailing = "${rules.size}")
-        Text(tr("Beobachten = Warnung, sobald es auftaucht. Stumm = nie warnen. Stumm gewinnt.", "Watch = alert as soon as it shows up. Mute = never alert. Mute wins."), color = C.dim, fontSize = 13.sp)
+        Text(tr("Beobachten = Warnung, sobald es auftaucht. Stumm = nie warnen. Polizei = von dir gesehen, gilt ab jetzt als „wahrscheinlich Polizei“ (gewarnt wird nur mit Verkehrs-Hinweisen). Stumm gewinnt.",
+            "Watch = alert as soon as it shows up. Mute = never alert. Police = you saw it, from now on it counts as \"probably police\" (alerts only with traffic alerts on). Mute wins."), color = C.dim, fontSize = 13.sp)
         for (r in rules) Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(if (r.kind == RuleKind.WATCH) tr("Beobachten", "Watch") else tr("Stumm", "Mute"), color = if (r.kind == RuleKind.WATCH) C.amber else C.dim, fontSize = 14.sp, modifier = Modifier.widthIn(min = 88.dp))
+            Text(r.kind.label(), color = when (r.kind) { RuleKind.WATCH -> C.amber; RuleKind.POLICE -> C.blue; RuleKind.MUTE -> C.dim }, fontSize = 14.sp, modifier = Modifier.widthIn(min = 88.dp))
             Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
                 Text(r.value, style = data.copy(fontSize = 14.sp))
                 Text(r.field.label() + if (r.note.isNotBlank()) ", ${r.note}" else "", color = C.dim, fontSize = 13.sp)
@@ -247,6 +248,7 @@ private fun RuleDialog(onSave: (Rule) -> Unit, onDismiss: () -> Unit) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Chip(tr("Beobachten", "Watch"), kind == RuleKind.WATCH) { kind = RuleKind.WATCH }
                     Chip(tr("Stumm", "Mute"), kind == RuleKind.MUTE, C.dim) { kind = RuleKind.MUTE }
+                    Chip(tr("Polizei", "Police"), kind == RuleKind.POLICE, C.blue) { kind = RuleKind.POLICE }
                 }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     for (f in RuleField.entries) Chip(f.label(), field == f) { field = f }

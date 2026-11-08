@@ -56,7 +56,9 @@ class Classifier(private val oui: OuiDb) {
 
         val watch = rules.firstOrNull { it.kind == RuleKind.WATCH && it.matches(s, vendor) }
         val mute = rules.firstOrNull { it.kind == RuleKind.MUTE && it.matches(s, vendor) }
+        val police = rules.firstOrNull { it.kind == RuleKind.POLICE && it.matches(s, vendor) }
         watch?.let { ev += Evidence(Source.RULE, tr("Deine Regel: beobachten (${it.field.label()} „${it.value}“)", "Your rule: watch (${it.field.label()} \"${it.value}\")"), Confidence.HIGH) }
+        police?.let { ev += Evidence(Source.RULE, tr("Von dir als Polizei markiert (${it.field.label()} „${it.value}“)", "You marked this as police (${it.field.label()} \"${it.value}\")"), Confidence.HIGH) }
         mute?.let { ev += Evidence(Source.RULE, tr("Deine Regel: stumm (${it.field.label()} „${it.value}“)", "Your rule: mute (${it.field.label()} \"${it.value}\")"), Confidence.HIGH) }
 
         // a train's or bus's passenger Wi-Fi (WIFIonICE on an Icomera router) is public Wi-Fi, not a vehicle to report
@@ -65,6 +67,6 @@ class Classifier(private val oui: OuiDb) {
         if (byName != null && byName.category != Category.CAR) candidates.remove(Category.CAR)
         // otherwise the most specific finding wins; enum order is TRACKER, PRIORITY, CAMERA, FLEET, PUBLIC_WIFI, ...
         val category = candidates.minByOrNull { it.ordinal } ?: Category.UNKNOWN
-        return Classification(vendor, random, category, tracker, ev, watch, mute)
+        return Classification(vendor, random, category, tracker, ev, watch, mute, police)
     }
 }

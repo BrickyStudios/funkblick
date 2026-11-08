@@ -38,6 +38,8 @@ class Session(private val classifier: Classifier, private val now: () -> Long = 
     private val lastSighting = HashMap<String, Sighting>() // BLE payloads, for reclassify()
     private val places = HashMap<String, MutableList<Pair<Double, Double>>>()
     private val readings = HashMap<String, MutableList<Reading>>()
+    private var lastLat: Double? = null // for reclassify(): the NRW fleet rule needs to know where
+    private var lastLon: Double? = null
     var startedAt = now()
         private set
 
@@ -58,6 +60,7 @@ class Session(private val classifier: Classifier, private val now: () -> Long = 
         val old = devices[id]
         var pos = old?.pos
         if (lat != null && lon != null) {
+            lastLat = lat; lastLon = lon
             val list = places.getOrPut(id) { mutableListOf() }
             if (list.none { (a, b) -> distanceMeters(a, b, lat, lon) < PLACE_METERS }) list += lat to lon
             val r = readings.getOrPut(id) { mutableListOf() }
@@ -103,7 +106,10 @@ class Session(private val classifier: Classifier, private val now: () -> Long = 
 
     /** Re-run classification after the rules changed, so watch/mute show up without waiting for the next scan. */
     fun reclassify(rules: List<Rule>) {
-        for ((id, d) in devices) lastSighting[id]?.let { devices[id] = d.copy(cls = classifier.classify(it, rules)) }
+        for ((id, d) in devices) lastSighting[id]?.let {
+            val n = d.copy(cls = classifier.classify(it, rules))
+            devices[id] = n.copy(police = policeFor(n, devices.values, lastLat, lastLon)) // a police mark shows at once
+        }
     }
 }
 

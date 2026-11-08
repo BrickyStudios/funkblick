@@ -368,7 +368,8 @@ fun DeviceSheet(d: Device, onFind: () -> Unit, onDismiss: () -> Unit) {
     val m = remember(settings.safeScreen) { Funk.screenMasker() }
     val col = d.cls.category.color()
     val hex = hexOf(d.address) ?: ""
-    val own = rules.filter { (it.field == RuleField.ADDRESS && hexOf(it.value) == hex) || (it.field == RuleField.PREFIX && hex.startsWith(it.value.filter(Char::isLetterOrDigit).uppercase())) }
+    val own = rules.filter { (it.field == RuleField.ADDRESS && hexOf(it.value) == hex) || (it.field == RuleField.PREFIX && hex.startsWith(it.value.filter(Char::isLetterOrDigit).uppercase())) ||
+        (it.field == RuleField.NAME_EXACT && d.name?.trim().equals(it.value, ignoreCase = true)) }
     fun add(kind: RuleKind, field: RuleField, value: String) {
         Funk.setRules(rules + Rule(kind, field, value, note = m.name(d) ?: d.cls.vendor ?: ""))
         onDismiss()
@@ -418,7 +419,12 @@ fun DeviceSheet(d: Device, onFind: () -> Unit, onDismiss: () -> Unit) {
                 Chip(tr("Gerät stumm", "Mute device"), false, C.dim) { add(RuleKind.MUTE, RuleField.ADDRESS, d.address) }
                 if (!d.cls.randomAddress && hex.length == 12) Chip(tr("Hersteller beobachten", "Watch maker"), false) { add(RuleKind.WATCH, RuleField.PREFIX, hex.take(6)) }
                 if (d.name != null) Chip(tr("Name beobachten", "Watch name"), false) { add(RuleKind.WATCH, RuleField.NAME_EXACT, d.name) }
-                for (r in own) Chip(tr("Regel löschen: ", "Delete rule: ") + r.field.label(), false, C.red) { Funk.setRules(rules - r); onDismiss() }
+                // you saw it was police: from now on it counts as "probably". Needs something that stays: the address, else the name
+                if (d.cls.police == null) when {
+                    d.radio == Radio.WIFI || !d.cls.randomAddress -> Chip(tr("Als Polizei markieren", "Mark as police"), false, C.blue) { add(RuleKind.POLICE, RuleField.ADDRESS, d.address) }
+                    d.name != null -> Chip(tr("Als Polizei markieren", "Mark as police"), false, C.blue) { add(RuleKind.POLICE, RuleField.NAME_EXACT, d.name) }
+                }
+                for (r in own) Chip(tr("Regel löschen: ", "Delete rule: ") + "${r.kind.label()}, ${r.field.label()}", false, C.red) { Funk.setRules(rules - r); onDismiss() }
             }
         }
     }
