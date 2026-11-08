@@ -64,6 +64,13 @@ class SpeedCamTest {
     // two cameras on a north-south road in Hamburg, 400 m north and 400 m south of us
     private val db = SpeedCamDb(sequenceOf("53.56000\t9.99000\t50\t", "53.55280\t9.99000\t\t", "garbage"))
 
+    @Test fun trafficCamerasKeepTheirKind() {
+        // same format as assets/trafficcams.tsv: no speed limit, no direction, a kind
+        val t = SpeedCamDb(sequenceOf("53.55100\t9.99000\t\t\tcam", "53.55200\t9.99000\t\t\talpr", "53.55300\t9.99000\t\t\tsensor"))
+        assertEquals(listOf("alpr", "cam", "sensor"), t.near(53.55, 9.99, 1_000.0).mapNotNull { it.kind }.sorted())
+        assertNull(db.near(53.556, 9.99, 1_000.0).first().kind) // a speed camera has none
+    }
+
     @Test fun nearestAheadOnly() {
         assertEquals(2, db.size)
         val north = db.ahead(53.55640, 9.99, heading = 0.0)

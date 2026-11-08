@@ -11,11 +11,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -66,6 +69,7 @@ fun openBlitzerDe(context: Context) {
  * Car mode, full screen (plan 1D): the map on two thirds, below it speed, the next speed camera, four counters and the
  * last alert in big type. Screen stays on. Without GPS the radar stands in (plan 2C). Landscape: map left, bar right.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CarScreen(running: Boolean, onStart: () -> Unit, onEnableTraffic: () -> Unit, onClose: () -> Unit) {
     val context = LocalContext.current
@@ -130,6 +134,15 @@ fun CarScreen(running: Boolean, onStart: () -> Unit, onEnableTraffic: () -> Unit
                     Text(ago(a.time, now), style = data.copy(fontSize = 14.sp, color = kindColor(a.kind)))
                 }
             } ?: Text(tr("Noch keine Meldung.", "No alerts yet."), color = C.dim, fontSize = 16.sp)
+            // what the dots on the map are; traffic cameras and counters come from OpenStreetMap, bundled (no request, no position sent)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                val keys = listOfNotNull(if (settings.traffic) C.red to tr("Blitzer", "Speed camera") else null,
+                    trafficColor("cam") to tr("Verkehrskamera", "Traffic camera"), trafficColor("alpr") to tr("Kennzeichen-Scanner", "Plate reader"),
+                    trafficColor("sensor") to tr("Zählstelle", "Traffic counter"))
+                for ((c, t) in keys) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(min = 24.dp)) {
+                    Dot(c, 10); Spacer(Modifier.width(6.dp)); Text(t, color = C.dim, fontSize = 13.sp)
+                }
+            }
             if (!running) BigButton(tr("Scan starten", "Start scan"), filled = true, height = 64, onClick = onStart)
             if (!settings.traffic) BigButton(tr("Verkehrs-Hinweise einschalten", "Turn on traffic alerts"), filled = false, color = C.red, height = 64, onClick = onEnableTraffic)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

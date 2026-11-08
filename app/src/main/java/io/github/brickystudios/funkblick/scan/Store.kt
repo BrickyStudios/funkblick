@@ -78,6 +78,8 @@ object Funk {
         private set
     var speedCams = SpeedCamDb.EMPTY
         private set
+    var trafficCams = SpeedCamDb.EMPTY // traffic cameras, number plate scanners, counters (OpenStreetMap, bundled)
+        private set
     var ouiSize = 0
         private set
 
@@ -118,6 +120,7 @@ object Funk {
         classifier = Classifier(oui)
         session = Session(classifier)
         loadSpeedCams()
+        trafficCams = SpeedCamDb(app.assets.open("trafficcams.tsv").bufferedReader().readLines().asSequence())
         val prefs = prefs()
         prefs.getString("settings", null)?.let { s -> runCatching { gson.fromJson(s, Settings::class.java) }.getOrNull()?.let { _settings.value = it } }
         prefs.getString("rules", null)?.let { s ->

@@ -54,6 +54,13 @@ object C {
 }
 
 /** Kind colours, 15 % calmer than v1 so only real alerts shout (plan D5). */
+/** Traffic cameras on the map: cameras in the camera violet, number plate scanners in the police blue, counters plain. */
+fun trafficColor(kind: String?): Color = when (kind) {
+    "alpr" -> C.blue
+    "sensor" -> Category.INFRA.color()
+    else -> Category.CAMERA.color()
+}
+
 fun Category.color(): Color = when (this) {
     Category.TRACKER -> C.red
     Category.PRIORITY -> C.blue

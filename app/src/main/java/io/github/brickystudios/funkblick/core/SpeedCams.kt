@@ -10,7 +10,8 @@ import kotlin.math.sqrt
 // Fixed speed cameras in Germany from OpenStreetMap (assets/speedcams.tsv, tools/build_speedcams.py), ODbL.
 // Bundled on purpose: the warning works offline and your position never leaves the phone.
 
-data class SpeedCam(val lat: Double, val lon: Double, val maxspeed: Int?)
+/** kind: null for a speed camera; "cam", "alpr" or "sensor" for the traffic cameras and counters in assets/trafficcams.tsv. */
+data class SpeedCam(val lat: Double, val lon: Double, val maxspeed: Int?, val kind: String? = null)
 
 data class CamAhead(val cam: SpeedCam, val meters: Int)
 
@@ -67,7 +68,7 @@ class SpeedCamDb(lines: Sequence<String>) {
             val p = line.split('\t')
             val lat = p.getOrNull(0)?.toDoubleOrNull() ?: continue
             val lon = p.getOrNull(1)?.toDoubleOrNull() ?: continue
-            grid.getOrPut(cell(lat, lon)) { mutableListOf() } += SpeedCam(lat, lon, p.getOrNull(2)?.toIntOrNull())
+            grid.getOrPut(cell(lat, lon)) { mutableListOf() } += SpeedCam(lat, lon, p.getOrNull(2)?.toIntOrNull(), p.getOrNull(4)?.takeIf { it.isNotEmpty() })
         }
     }
 

@@ -83,6 +83,7 @@ private const val GRID_STYLE = """{"version":8,"sources":{},"layers":[{"id":"bac
 
 private const val SRC_TRACK = "fb-track"
 private const val SRC_CAMS = "fb-cams"
+private const val SRC_TRAFFIC = "fb-traffic"
 private const val SRC_NOTABLE = "fb-notable"
 private const val SRC_OTHER = "fb-other"
 private const val SRC_ME = "fb-me"
@@ -96,6 +97,7 @@ private fun addOverlay(style: Style, light: Boolean) {
     style.addSource(GeoJsonSource(SRC_GRID, empty))
     style.addSource(GeoJsonSource(SRC_TRACK, empty))
     style.addSource(GeoJsonSource(SRC_CAMS, empty))
+    style.addSource(GeoJsonSource(SRC_TRAFFIC, empty))
     style.addSource(GeoJsonSource(SRC_RING, empty))
     style.addSource(GeoJsonSource(SRC_NOTABLE, empty))
     // everything else is bundled into numbers until you zoom into a street (plan 7E)
@@ -108,6 +110,8 @@ private fun addOverlay(style: Style, light: Boolean) {
         return
     }
     style.addLayer(LineLayer("fb-track", SRC_TRACK).withProperties(P.lineColor("#FFB020"), P.lineOpacity(0.55f), P.lineWidth(3f)))
+    style.addLayer(CircleLayer("fb-traffic", SRC_TRAFFIC).withProperties(P.circleColor(Expression.toColor(Expression.get("c"))), P.circleRadius(5f),
+        P.circleStrokeColor("#0D0C0A"), P.circleStrokeWidth(1.5f)))
     style.addLayer(CircleLayer("fb-cams", SRC_CAMS).withProperties(P.circleColor("#FF4D5E"), P.circleRadius(7f), P.circleStrokeColor("#F2E8D5"), P.circleStrokeWidth(2f)))
     style.addLayer(CircleLayer("fb-other-cluster", SRC_OTHER).withFilter(Expression.has("point_count")).withProperties(
         P.circleColor("#2A2418"), P.circleRadius(14f), P.circleStrokeColor("#6B5A3A"), P.circleStrokeWidth(1f)).also { it.minZoom = 15f })
@@ -162,8 +166,12 @@ private fun update(style: Style, devices: List<Device>, fix: Fix?, track: List<F
     val rings = mutableListOf<Feature>()
     if (fix != null) {
         src(SRC_ME)?.setGeoJson(Feature.fromGeometry(Point.fromLngLat(fix.lon, fix.lat)))
-        src(SRC_CAMS)?.setGeoJson(FeatureCollection.fromFeatures(Funk.speedCams.near(fix.lat, fix.lon, 5_000.0)
+        // speed cameras belong to the traffic alerts and their opt-in (StVO § 23 Abs. 1c), like the warning itself
+        src(SRC_CAMS)?.setGeoJson(FeatureCollection.fromFeatures(if (!Funk.settings.value.traffic) emptyList() else Funk.speedCams.near(fix.lat, fix.lon, 5_000.0)
             .map { Feature.fromGeometry(Point.fromLngLat(it.lon, it.lat)) }))
+        src(SRC_TRAFFIC)?.setGeoJson(FeatureCollection.fromFeatures(Funk.trafficCams.near(fix.lat, fix.lon, 5_000.0).map {
+            Feature.fromGeometry(Point.fromLngLat(it.lon, it.lat)).apply { addStringProperty("c", hex(trafficColor(it.kind))) }
+        }))
         // vehicles that come along have no fixed spot: a ring around you, one per follower, slightly larger each
         devices.filter { it.isFollowingVehicle() }.forEachIndexed { i, _ -> rings += ring(fix.lat, fix.lon, 40.0 + i * 12, hex(Category.FLEET.color())) }
         if (offline) src(SRC_GRID)?.setGeoJson(grid(fix.lat, fix.lon))
