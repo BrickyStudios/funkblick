@@ -43,6 +43,10 @@ class Classifier(private val oui: OuiDb) {
             candidates += h.category
             if (h.axon && (vendor == null || random)) vendor = "Axon Enterprise"
         }
+        hackerSignature(s)?.let { h ->
+            ev += Evidence(Source.PAYLOAD, h.why, Confidence.HIGH)
+            candidates += h.category
+        }
         val byName = matchName(s.name)
         byName?.let { sig ->
             ev += Evidence(Source.NAME, sig.why(), Confidence.MEDIUM)

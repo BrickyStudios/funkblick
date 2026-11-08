@@ -17,7 +17,7 @@
   };
   // the app's colours and short names per category (ui/Theme.kt)
   const CAT = {
-    TRACKER: ["#FF4D5E", "Tracker", "Tracker"], PRIORITY: ["#6E95F0", "Behörde", "Police/EMS"], CAMERA: ["#D27BE8", "Kamera", "Camera"],
+    TRACKER: ["#FF4D5E", "Tracker", "Tracker"], PRIORITY: ["#6E95F0", "Behörde", "Police/EMS"], CAMERA: ["#D27BE8", "Kamera", "Camera"], HACKER: ["#FF6FB5", "Hacker-Werkzeug", "Hacking tool"],
     FLEET: ["#F0904E", "Fahrzeug-Router", "Vehicle router"], CAR: ["#8CBFE8", "Auto", "Car"], PUBLIC_WIFI: ["#E8CC8A", "Öffentlich", "Public"],
     INFRA: ["#B3A68F", "Firma", "Business"], HOME: ["#E3DCCF", "Zuhause", "Home"], PERSONAL: ["#A996EE", "Persönlich", "Personal"],
     UNKNOWN: ["#8A8172", "Unbekannt", "Unknown"],
@@ -25,7 +25,7 @@
   const ORDER = Object.keys(CAT);
   const catName = (c) => (CAT[c] || CAT.UNKNOWN)[de ? 1 : 2];
   const catColor = (c) => (CAT[c] || CAT.UNKNOWN)[0];
-  const ALERT = { tracker: "#FF4D5E", speedcam: "#FF4D5E", priority: "#6E95F0", police: "#6E95F0", camera: "#D27BE8", fleet: "#F0904E", follow: "#F0904E" };
+  const ALERT = { tracker: "#FF4D5E", speedcam: "#FF4D5E", priority: "#6E95F0", police: "#6E95F0", camera: "#D27BE8", hacker: "#FF6FB5", fleet: "#F0904E", follow: "#F0904E" };
 
   const log = { meta: null, devices: [], alerts: [], track: [], points: [] };
   const $ = (id) => document.getElementById(id);
@@ -79,7 +79,7 @@
       showMap();
     } else if (ds.length) { const m = el("section"); m.append(el("h2", null, T.map), el("p", "small", T.nomap)); out.append(m); }
     if (ds.length) {
-      const notable = ds.filter((d) => d.police || d.watch || ["TRACKER", "PRIORITY", "CAMERA", "FLEET", "CAR"].includes(d.category))
+      const notable = ds.filter((d) => d.police || d.watch || ["TRACKER", "PRIORITY", "CAMERA", "HACKER", "FLEET", "CAR"].includes(d.category))
         .sort((a, b) => ORDER.indexOf(a.category) - ORDER.indexOf(b.category) || (b.places || 0) - (a.places || 0)).slice(0, 150);
       const sec = el("section"); sec.append(el("h2", null, T.notable + " " + notable.length));
       const wrap = el("div", "scroll"), table = el("table"), head = el("tr");

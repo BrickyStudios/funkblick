@@ -41,6 +41,7 @@ fun AlertReason.kind(): String = when (this) {
     AlertReason.FLEET -> "fleet"
     AlertReason.VEHICLE_FOLLOWING -> "follow"
     AlertReason.HOME_NEW -> "home"
+    AlertReason.HACKER, AlertReason.BLE_SPAM, AlertReason.EVIL_TWIN -> "hacker"
 }
 
 data class ExportMeta(val app: String, val build: String, val android: String, val startedAt: Long, val exportedAt: Long, val safe: Boolean)

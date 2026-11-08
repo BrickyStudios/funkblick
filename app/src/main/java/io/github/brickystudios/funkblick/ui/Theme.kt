@@ -65,6 +65,7 @@ fun Category.color(): Color = when (this) {
     Category.TRACKER -> C.red
     Category.PRIORITY -> C.blue
     Category.CAMERA -> Color(0xFFD27BE8)
+    Category.HACKER -> Color(0xFFFF6FB5)
     Category.FLEET -> Color(0xFFF0904E)
     Category.CAR -> Color(0xFF8CBFE8)
     Category.PUBLIC_WIFI -> Color(0xFFE8CC8A)
@@ -79,6 +80,7 @@ fun Category.short(): String = when (this) {
     Category.TRACKER -> "Tracker"
     Category.PRIORITY -> tr("Behörde", "Police/EMS")
     Category.CAMERA -> tr("Kamera", "Camera")
+    Category.HACKER -> "Hacker"
     Category.FLEET -> tr("Fahrzeug-Router", "Vehicle router")
     Category.CAR -> tr("Auto", "Car")
     Category.PUBLIC_WIFI -> tr("Öffentlich", "Public")

@@ -48,6 +48,7 @@ data class Settings(
     val vibrate: Boolean = true,
     val trackers: Boolean = true,
     val cameras: Boolean = true,
+    val hackers: Boolean = true,
     val traffic: Boolean = false, // speed cameras + public safety + vehicle routers, only after the StVO warning
     val ble: Boolean = true,
     val log: Boolean = true,
@@ -94,7 +95,7 @@ object Funk {
         private set
 
     /** Home watch for the More page: how many devices it knows, minutes still learning, are you there, how many new ones. */
-    data class HomeState(val known: Int, val learningMin: Int, val there: Boolean, val new: Int)
+    data class HomeState(val known: Int, val learningMin: Int, val there: Boolean, val new: Int, val cameras: Int)
     val home = MutableStateFlow<HomeState?>(null)
     private var savedHome: HomeWatch? = null
     private val _devices = MutableStateFlow<List<Device>>(emptyList())
@@ -222,7 +223,7 @@ object Funk {
         publish()
     }
 
-    fun alertSettings() = _settings.value.let { AlertSettings(trackers = it.trackers, cameras = it.cameras, traffic = it.traffic) }
+    fun alertSettings() = _settings.value.let { AlertSettings(trackers = it.trackers, cameras = it.cameras, traffic = it.traffic, hackers = it.hackers) }
 
     /** One sighting from a radio. Returns the alert to ring, if any. */
     fun ingest(s: Sighting): Alert? = fix.value.let { f -> session.add(s, _rules.value, alertSettings(), f?.lat, f?.lon, f?.speedKmh) }
@@ -231,7 +232,8 @@ object Funk {
         _devices.value = session.devices.values.toList()
         val now = System.currentTimeMillis()
         home.value = session.home?.let { h ->
-            HomeState(h.known.size, if (now < h.learnUntil) ((h.learnUntil - now + 59_999) / 60_000).toInt() else 0, running.value && session.atHome, session.newAtHome.size)
+            HomeState(h.known.size, if (now < h.learnUntil) ((h.learnUntil - now + 59_999) / 60_000).toInt() else 0, running.value && session.atHome, session.newAtHome.size,
+                session.devices.values.count { it.id in h.known && it.cls.category == Category.CAMERA })
         }
     }
 

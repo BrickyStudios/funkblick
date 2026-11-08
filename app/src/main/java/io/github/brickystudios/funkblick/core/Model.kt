@@ -25,7 +25,7 @@ class Sighting(
     val serviceUuids: Set<Int> = emptySet(), // BLE 16-bit service UUIDs
 )
 
-enum class Category { TRACKER, PRIORITY, CAMERA, FLEET, CAR, PUBLIC_WIFI, INFRA, HOME, PERSONAL, UNKNOWN }
+enum class Category { TRACKER, PRIORITY, CAMERA, HACKER, FLEET, CAR, PUBLIC_WIFI, INFRA, HOME, PERSONAL, UNKNOWN }
 
 enum class Confidence { LOW, MEDIUM, HIGH }
 
@@ -88,6 +88,7 @@ fun Category.label(): String = when (this) {
     Category.TRACKER -> tr("Tracker", "Tracker")
     Category.PRIORITY -> tr("Behörden- und Einsatztechnik", "Public safety gear")
     Category.CAMERA -> tr("Kamera", "Camera")
+    Category.HACKER -> tr("Hacker-Werkzeug oder Skimmer", "Hacking tool or skimmer")
     Category.FLEET -> tr("Fahrzeug-/Mobilfunkrouter", "Vehicle / cellular router")
     Category.CAR -> tr("Auto (Infotainment-WLAN)", "Car (infotainment Wi-Fi)")
     Category.PUBLIC_WIFI -> tr("Öffentliches WLAN", "Public Wi-Fi")

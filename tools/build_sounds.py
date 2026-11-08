@@ -32,6 +32,7 @@ LINES = {
     "police": ("Wahrscheinlich Polizei in der Nähe.", "Probably police nearby."),
     "start": ("Funkblick aktiv. Scan läuft.", "Funkblick online. Scanning."),
     "home": ("Neues Gerät an deinem Ort.", "New device at your place."),
+    "hacker": ("Achtung. Hacker-Werkzeug in der Nähe.", "Warning. Hacking tool nearby."),
 }
 
 
@@ -99,6 +100,8 @@ TONES = {
                  (1.06, tone(659, 0.5, 0.3, "bell")), (1.06, tone(784, 0.5, 0.3, "bell"))),
     # doorbell: two bell tones, high then low: something new at your door
     "home": seq((0, tone(784, 0.5, 0.3, "bell")), (0.35, tone(622, 0.7, 0.4, "bell"))),
+    # data stutter: a quick run of short triangle blips up and down
+    "hacker": seq(*[(i * 0.07, tone(f, 0.05, 0.02, "tri")) for i, f in enumerate((1175, 880, 1319, 988, 1480, 1109, 1568))]),
     # scan stop: falling triad
     "stop": seq((0, tone(784, 0.12, 0.06)), (0.09, tone(659, 0.12, 0.06)), (0.18, tone(523, 0.3, 0.15))),
 }

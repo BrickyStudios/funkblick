@@ -92,6 +92,7 @@ fun kindColor(kind: String): Color = when (kind) {
     "tracker", "speedcam" -> C.red
     "priority", "police" -> C.blue
     "camera" -> Category.CAMERA.color()
+    "hacker" -> Category.HACKER.color()
     "fleet", "follow" -> Category.FLEET.color()
     else -> C.amber
 }

@@ -7,9 +7,10 @@ data class AlertSettings(
     // Off by default and behind a warning: drivers in Germany must not use functions that point out traffic
     // enforcement (StVO § 23 Abs. 1c). Covers public safety gear, vehicle routers and speed cameras.
     val traffic: Boolean = false,
+    val hackers: Boolean = true, // Flipper Zero, WiFi Pineapple, Bluetooth spam, evil twin Wi-Fi, skimmer modules
 )
 
-enum class AlertReason { WATCH, TRACKER_FOLLOWING, POLICE_PROBABLE, PRIORITY, CAMERA, FLEET, VEHICLE_FOLLOWING, HOME_NEW }
+enum class AlertReason { WATCH, TRACKER_FOLLOWING, POLICE_PROBABLE, PRIORITY, CAMERA, FLEET, VEHICLE_FOLLOWING, HOME_NEW, HACKER, BLE_SPAM, EVIL_TWIN }
 
 data class Alert(val device: Device, val reason: AlertReason)
 
@@ -50,11 +51,13 @@ class Session(private val classifier: Classifier, private val now: () -> Long = 
     /** What was new at your place this session and got reported; "accept" moves it into the known set. */
     val newAtHome = LinkedHashSet<String>()
     val atHome: Boolean get() = home != null && now() - homeSeen <= HOME_PRESENT_MS
+    private val spam = SpamCounter()
+    private val twins = TwinWatch()
 
     fun clear() {
         devices.clear(); lastObservation.clear(); streakStart.clear(); lastAlert.clear(); lastSighting.clear(); places.clear(); readings.clear()
         startedAt = now()
-        homeSeen = Long.MIN_VALUE / 2; newAtHome.clear()
+        homeSeen = Long.MIN_VALUE / 2; newAtHome.clear(); spam.clear(); twins.clear()
     }
 
     /** lat/lon: where the phone was, if GPS knows. With places, a tracker must follow you somewhere to count. */
@@ -96,10 +99,16 @@ class Session(private val classifier: Classifier, private val now: () -> Long = 
             if (!atHome) return@let
             val learning = now() < h.learnUntil
             if (learning && (withPolice.fixedAddress() || withPolice.cls.tracker != null)) home = h.copy(known = h.known + id)
-            // at your place, what was always there doesn't ring again: your own camera, the router across the road
-            if (id in home!!.known) { if (reason in HOME_QUIET) reason = null; return@let }
+            // at your place, what was always there doesn't ring again: your own camera, the router across the road.
+            // While learning it still rings: in a holiday flat, a camera that was there before you came must not go quiet unheard.
+            if (id in home!!.known) { if (!learning && reason in HOME_QUIET) reason = null; return@let }
             // new here: listed for "accept as known"; a camera keeps its own, more specific alert
             if (fresh && id !in newAtHome && withPolice.newAtHomeMatters(streakMs)) { newAtHome += id; if (reason == null) reason = AlertReason.HOME_NEW }
+        }
+        // attacks seen across adverts: a flood of pairing pop-ups, or a fake copy of a Wi-Fi network
+        if (settings.hackers && fresh) {
+            if (old == null && s.radio == Radio.BLE && s.isPairingPopup() && spam.add(id, s.timeMs)) return Alert(withPolice, AlertReason.BLE_SPAM)
+            twins.add(withPolice)?.let { twin -> devices[twin]?.let { return Alert(it, AlertReason.EVIL_TWIN) } }
         }
         if (!fresh || reason == null) return null
         val key = "$id/$reason"
@@ -117,6 +126,7 @@ class Session(private val classifier: Classifier, private val now: () -> Long = 
         val moved = d.places == 0 || d.places >= FOLLOW_PLACES
         if (settings.trackers && t != null && t.kind.isTag && t.separated == true && streakMs >= FOLLOW_MS && moved) return AlertReason.TRACKER_FOLLOWING
         if (settings.cameras && c.category == Category.CAMERA && (!driving || streakMs >= CAMERA_DRIVING_MS)) return AlertReason.CAMERA
+        if (settings.hackers && c.category == Category.HACKER) return AlertReason.HACKER
         if (settings.traffic && d.police?.level == PoliceLevel.PROBABLE) return AlertReason.POLICE_PROBABLE
         if (settings.traffic && c.category == Category.PRIORITY) return AlertReason.PRIORITY
         if (settings.traffic && d.isFollowingVehicle(streakMs)) return AlertReason.VEHICLE_FOLLOWING
@@ -172,5 +182,8 @@ fun AlertReason.label(): String = when (this) {
     AlertReason.VEHICLE_FOLLOWING -> tr("Ein Fahrzeug fährt seit Minuten mit dir", "A vehicle has been with you for minutes")
     AlertReason.CAMERA -> tr("Kamera in der Nähe", "Camera nearby")
     AlertReason.HOME_NEW -> tr("Neu an deinem gemerkten Ort", "New at your saved place")
+    AlertReason.HACKER -> tr("Hacker-Werkzeug in der Nähe", "Hacking tool nearby")
+    AlertReason.BLE_SPAM -> tr("Bluetooth-Spam-Angriff: keine Kopplung annehmen", "Bluetooth spam attack: don't accept pairing")
+    AlertReason.EVIL_TWIN -> tr("Mögliches gefälschtes WLAN: nicht verbinden", "Possible fake Wi-Fi: don't connect")
     AlertReason.FLEET -> tr("Fahrzeug-/Mobilfunkrouter in der Nähe", "Vehicle / cellular router nearby")
 }

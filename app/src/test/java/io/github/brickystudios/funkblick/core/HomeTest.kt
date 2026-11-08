@@ -59,6 +59,16 @@ class HomeTest {
         assertNull(session.add(speaker(clock), emptyList(), s))
     }
 
+    @Test fun aCameraThereWhileLearningStillRings() {
+        // a holiday flat: you remember the place first, the hidden camera was there before you
+        session.add(router(clock), emptyList(), s)
+        assertNotNull(session.markHome())
+        clock += 60_000
+        session.add(router(clock), emptyList(), s)
+        assertEquals(AlertReason.CAMERA, session.add(newCam(clock), emptyList(), s)?.reason)
+        assertTrue(session.home!!.known.any { it.endsWith("00:4B:12:7F:3A:D0") }) // learned, quiet once learning is over
+    }
+
     @Test fun noWifiNoPlace() {
         session.add(phone(clock), emptyList(), s)
         assertNull(session.markHome())

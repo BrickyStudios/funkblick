@@ -101,6 +101,7 @@ fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetu
         Toggle(tr("Vibration", "Vibration"), null, s.vibrate) { v -> Funk.updateSettings { it.copy(vibrate = v) } }
         Toggle(tr("Tracker-Schutz", "Tracker protection"), tr("Warnt, wenn ein AirTag, SmartTag, Tile & Co. über 10 Minuten mit dir unterwegs ist", "Warns when an AirTag, SmartTag, Tile & co. stays with you for over 10 minutes"), s.trackers) { v -> Funk.updateSettings { it.copy(trackers = v) } }
         Toggle(tr("Kameras", "Cameras"), tr("Warnt bei Kameras mit eigenem WLAN, etwa in der Ferienwohnung", "Warns about cameras running their own Wi-Fi, e.g. in a holiday flat"), s.cameras) { v -> Funk.updateSettings { it.copy(cameras = v) } }
+        Toggle(tr("Hacker-Werkzeuge", "Hacking tools"), tr("Warnt vor Flipper Zero, WiFi Pineapple, Deauthern, Bluetooth-Spam, gefälschten WLANs und Skimmer-Modulen", "Warns about Flipper Zero, WiFi Pineapple, deauthers, Bluetooth spam, fake Wi-Fi and skimmer modules"), s.hackers) { v -> Funk.updateSettings { it.copy(hackers = v) } }
         Toggle(tr("Verkehrs-Hinweise", "Traffic alerts"), tr("Blitzer, mögliche Behörden- und Fahrzeugtechnik. Nur für Beifahrer (§ 23 Abs. 1c StVO)", "Speed cameras, possible public safety and vehicle gear. Passengers only (StVO § 23 (1c))"), s.traffic) { v ->
             if (v) onEnableTraffic() else Funk.updateSettings { it.copy(traffic = false) }
         }
@@ -112,8 +113,8 @@ fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetu
 
         // plan F3: what's new at your place. The place is its Wi-Fi networks, no coordinates, never in a log or export
         Header(tr("Heim-Wächter", "Home watch"))
-        Text(tr("Merkt sich, was an einem Ort immer funkt, und meldet dort danach nur Neues: eine Kamera, einen fremden Tracker, ein Gerät direkt bei dir. Auch für die Ferienwohnung. Erkannt wird der Ort an seinen WLANs, gespeichert wird keine Position.",
-            "Learns what always transmits at a place, then reports only what's new there: a camera, a stranger's tracker, a device right next to you. Also for a holiday flat. The place is recognised by its Wi-Fi networks; no position is stored."),
+        Text(tr("Merkt sich, was an einem Ort immer funkt, und meldet dort danach nur Neues: eine Kamera, einen fremden Tracker, ein Gerät direkt bei dir. Auch für die Ferienwohnung: Kameras, die schon beim Merken da sind, meldet er einmal und zählt sie unten mit. Erkannt wird der Ort an seinen WLANs, gespeichert wird keine Position.",
+            "Learns what always transmits at a place, then reports only what's new there: a camera, a stranger's tracker, a device right next to you. Also for a holiday flat: cameras already there when you remember the place ring once and are counted below. The place is recognised by its Wi-Fi networks; no position is stored."),
             color = C.dim, fontSize = 14.sp, lineHeight = 20.sp)
         val h = home
         if (h == null) {
@@ -129,6 +130,8 @@ fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetu
             Text((if (h.known == 1) tr("1 bekanntes Gerät", "1 known device") else tr("${h.known} bekannte Geräte", "${h.known} known devices")) + ". $where." +
                 if (h.learningMin > 0) tr(" Lernt noch ${h.learningMin} min.", " Still learning for ${h.learningMin} min.") else "",
                 color = C.text, fontSize = 15.sp)
+            if (h.cameras > 0) Text(tr("Darunter ${h.cameras} Kamera${if (h.cameras > 1) "s" else ""}, schon beim Merken da. Gehört sie nicht dir oder dem Gastgeber offen sichtbar: suchen (Peilen).",
+                "Among them ${h.cameras} camera${if (h.cameras > 1) "s" else ""}, there when you remembered the place. If it isn't yours or openly visible: find it."), color = C.red, fontSize = 15.sp)
             if (h.new > 0) {
                 Text(tr("${h.new} neu seit dem Merken. Gehört es dir, übernimm es.", "${h.new} new since then. If it's yours, accept it."), color = C.amber, fontSize = 15.sp)
                 BigButton(tr("Als bekannt übernehmen", "Accept as known"), filled = false) { Funk.acceptNewAtHome() }
