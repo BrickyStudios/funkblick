@@ -70,6 +70,7 @@ Android 8.0 or newer on a 64-bit ARM phone. No Google Play services needed, so i
 | **Setup check** | On start, a checklist of every permission and switch the scan needs (location, nearby devices, notifications, Wi-Fi, Bluetooth, battery optimization), each with a button that opens the right Android screen. |
 | **Find mode** | Pick a tracker or camera and walk towards it: big smoothed signal meter, warmer/colder, a beep that speeds up as you get closer. |
 | **Car start** | Quick settings tile to start or stop scanning. Optional: when the phone connects to a car's Bluetooth, one tap on the notification opens car mode. |
+| **Trip review** | After you stop: time, distance, devices per km, share of open Wi-Fi, car Wi-Fis, vehicles that came along, the most common makers and every alert in order. Your own car and phone are left out. |
 | **Logs and export** | Every session as JSON on the phone, written every minute, copied to Downloads with one tap. Export CSV, JSON, GPX (opens in Organic Maps), GeoJSON or an AI debrief to paste into ChatGPT, Claude or a local model. |
 | **Diagnostics** | Wi-Fi scans requested and throttled, BLE state and adverts, GPS fixes, sounds played, build id. |
 
@@ -111,11 +112,11 @@ Funkblick does not show up on the Android Auto screen yet. Android Auto only run
 
 ## Roadmap
 
-Done in 1.1 to 1.4: find mode, the tracker rule with places, quick settings tile and car start, speed camera refresh, the setup checklist, logs to Downloads, the car category, vehicles that follow you, the map with device positions, probably police, discreet mode, GPX/GeoJSON, a calmer design with three tabs.
+Done in 1.1 to 1.5: find mode, the tracker rule with places, quick settings tile and car start, speed camera refresh, the setup checklist, logs to Downloads, the car category, vehicles that follow you, the map with device positions, probably police, discreet mode, GPX/GeoJSON, a calmer design with three tabs, the trip review.
 
 Next:
 1. **Web viewer** on the website: open a shared log in any browser, iPhone included (map, list, AI debrief). Scanning itself can't work on iPhones: iOS lets neither websites nor apps scan Wi-Fi, and Safari has no Web Bluetooth.
-2. **Trip review** with a timeline after each drive.
+2. **Home watcher**: a new camera, tracker or strong device at home gets a notice.
 3. **Android Auto** screen, once there is a way that does not depend on Google Play.
 
 ## Privacy

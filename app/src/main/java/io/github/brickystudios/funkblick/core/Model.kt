@@ -85,7 +85,7 @@ fun deviceId(radio: Radio, address: String) = "${radio.name}/$address"
 
 fun Category.label(): String = when (this) {
     Category.TRACKER -> tr("Tracker", "Tracker")
-    Category.PRIORITY -> tr("Behörden-/Einsatztechnik (möglich)", "Public safety gear (possible)")
+    Category.PRIORITY -> tr("Behörden- und Einsatztechnik", "Public safety gear")
     Category.CAMERA -> tr("Kamera", "Camera")
     Category.FLEET -> tr("Fahrzeug-/Mobilfunkrouter", "Vehicle / cellular router")
     Category.CAR -> tr("Auto (Infotainment-WLAN)", "Car (infotainment Wi-Fi)")

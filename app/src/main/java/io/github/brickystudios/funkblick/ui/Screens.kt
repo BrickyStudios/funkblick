@@ -74,6 +74,8 @@ import io.github.brickystudios.funkblick.core.hexOf
 import io.github.brickystudios.funkblick.core.isFollowingVehicle
 import io.github.brickystudios.funkblick.core.label
 import io.github.brickystudios.funkblick.core.tr
+import io.github.brickystudios.funkblick.core.tripStats
+import io.github.brickystudios.funkblick.core.TrackPoint
 import io.github.brickystudios.funkblick.scan.Funk
 import kotlinx.coroutines.delay
 
@@ -250,7 +252,7 @@ fun LiveScreen(running: Boolean, demo: Boolean, onStart: () -> Unit, onStop: () 
                     BigButton(tr("Diskret", "Discreet"), filled = false, color = C.dim, modifier = Modifier.weight(1f), onClick = onDiscreet)
                 }
                 if (!running) {
-                    if (hasSession) Recap(devices, alerts, track.isNotEmpty())
+                    if (hasSession) Recap(devices, alerts, track.map { TrackPoint(it.lat, it.lon, it.time) })
                     BigButton(tr("Scan starten", "Start scan"), filled = true, onClick = onStart)
                     if (!demo && !hasSession) TextAction(tr("Erst die Demo ansehen", "See the demo first"), onClick = onDemo)
                 }
@@ -266,20 +268,45 @@ fun LiveScreen(running: Boolean, demo: Boolean, onStart: () -> Unit, onStop: () 
     }
 }
 
-/** The last session at a glance once the scan stopped (plan 2G). */
+/** The last session once the scan stopped (plan 2G, F1, F4): numbers, makers and every alert in order. The route is on the map above. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Recap(devices: List<Device>, alerts: List<LoggedAlert>, hasTrack: Boolean) {
-    val first = devices.minOf { it.firstSeen }
-    val last = devices.maxOf { it.lastSeen }
+private fun Recap(devices: List<Device>, alerts: List<LoggedAlert>, track: List<TrackPoint>) {
+    val s = remember(devices, track) { tripStats(devices, track) } ?: return
+    val drive = s.km >= 1
+    val clock = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
+    @Composable
+    fun Num(k: String, v: String, warn: Boolean = false) = Column(Modifier.widthIn(min = 72.dp)) {
+        Text(k, style = label)
+        Text(v, style = data.copy(fontSize = 18.sp, color = if (warn) C.red else C.text))
+    }
     Panel {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(tr("Letzte Sitzung", "Last session"), color = C.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                for ((k, v) in listOf(tr("Dauer", "Time") to duration(last - first), tr("Geräte", "Devices") to "${devices.size}",
-                    tr("Warnungen", "Alerts") to "${alerts.size}", tr("Fuhren mit", "Followed") to "${devices.count { it.isFollowingVehicle() }}"))
-                    Column { Text(k, style = label); Text(v, style = data.copy(fontSize = 18.sp)) }
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(if (drive) tr("Letzte Fahrt", "Last drive") else tr("Letzte Sitzung", "Last session"), color = C.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Num(tr("Dauer", "Time"), duration(s.millis))
+                if (drive) Num(tr("Strecke", "Distance"), "%.1f km".format(s.km))
+                Num(tr("Geräte", "Devices"), "${s.devices}")
+                s.perKm?.let { Num(tr("pro km", "per km"), "$it") }
+                s.openPercent?.let { Num(tr("WLAN offen", "Open Wi-Fi"), "$it %") }
+                Num(tr("Auto-WLANs", "Car Wi-Fi"), "${s.carWifi}")
+                Num(tr("Fuhren mit", "Followed"), "${s.followed}", warn = s.followed > 0)
+                if (s.police > 0) Num(tr("Behörde?", "Police?"), "${s.police}")
+                if (s.trackers > 0) Num(tr("Tracker", "Trackers"), "${s.trackers}", warn = true)
             }
-            if (hasTrack) FunkMap(Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp)), follow = true)
+            if (s.makers.isNotEmpty()) Text(
+                tr("Häufigste Hersteller: ", "Most common makers: ") + s.makers.joinToString(", ") { "${it.first} ${it.second}" },
+                color = C.dim, fontSize = 14.sp,
+            )
+            if (alerts.isNotEmpty()) {
+                Text(tr("Warnungen der Reihe nach", "Alerts in order"), style = label)
+                for (a in alerts.sortedBy { it.time }.takeLast(30)) Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(clock.format(java.util.Date(a.time)), style = data.copy(fontSize = 13.sp, color = C.dim), modifier = Modifier.width(56.dp))
+                    Dot(kindColor(a.kind), 8)
+                    Spacer(Modifier.width(8.dp))
+                    Text(a.text, color = C.text, fontSize = 14.sp)
+                }
+            } else Text(tr("Keine Warnungen.", "No alerts."), color = C.dim, fontSize = 14.sp)
         }
     }
 }
