@@ -9,10 +9,12 @@ class Classifier(private val oui: OuiDb) {
     fun classify(s: Sighting, rules: List<Rule>): Classification {
         val ev = mutableListOf<Evidence>()
         val local = isLocallyAdministered(s.address)
-        var vendor = if (local) null else oui.lookup(s.address)
+        val axonBlock = !local && hexOf(s.address)?.startsWith(AXON_PRIVATE_BLOCK) == true
+        var vendor = if (local) null else if (axonBlock) "Axon Enterprise" else oui.lookup(s.address)
         if (vendor != null) ev += Evidence(
             Source.REGISTRY,
-            if (s.radio == Radio.WIFI) tr("IEEE-Register: Adressblock gehört $vendor", "IEEE registry: address block belongs to $vendor")
+            if (axonBlock) tr("Adressblock D8:1F:65 ist bei der IEEE privat; Messungen im Feld ordnen ihn Axon zu", "Address block D8:1F:65 is private at the IEEE; field captures put Axon in it")
+            else if (s.radio == Radio.WIFI) tr("IEEE-Register: Adressblock gehört $vendor", "IEEE registry: address block belongs to $vendor")
             else tr("IEEE-Register: $vendor (Bluetooth-Adressen sind oft zufällig, Treffer kann Zufall sein)",
                 "IEEE registry: $vendor (Bluetooth addresses are often random, this may be chance)"),
             if (s.radio == Radio.WIFI) Confidence.HIGH else Confidence.LOW,
@@ -35,6 +37,11 @@ class Classifier(private val oui: OuiDb) {
             }
             ev += Evidence(Source.PAYLOAD, tr("Sendet wie ${tracker.kind.label} ($state)", "Broadcasts like ${tracker.kind.label} ($state)"), Confidence.HIGH)
             candidates += if (tracker.kind.isTag) Category.TRACKER else Category.PERSONAL
+        }
+        payloadSignature(s)?.let { h ->
+            ev += Evidence(Source.PAYLOAD, h.why, Confidence.HIGH)
+            candidates += h.category
+            if (h.axon && (vendor == null || random)) vendor = "Axon Enterprise"
         }
         val byName = matchName(s.name)
         byName?.let { sig ->

@@ -19,7 +19,7 @@ fun policeFor(d: Device, others: Collection<Device>, lat: Double?, lon: Double?)
     val c = d.cls
     if (c.mute != null) return null
     if (c.police != null) return Police(PoliceLevel.PROBABLE, tr("Von dir als Polizei markiert", "You marked this as police"))
-    if (c.category == Category.PRIORITY && c.vendor?.startsWith("Axon", ignoreCase = true) == true)
+    if (c.category == Category.PRIORITY && (c.vendor?.startsWith("Axon", ignoreCase = true) == true || d.name?.let(AXON_NAME::containsMatchIn) == true))
         return Police(PoliceLevel.PROBABLE, tr("Axon-Gerät: Die Polizei NRW trägt Axon-Bodycams", "Axon device: NRW police wear Axon body cams"))
     if (c.category == Category.PRIORITY) return Police(PoliceLevel.POSSIBLE, tr("Hersteller von Behörden- und Einsatztechnik", "Maker of public safety gear"))
     if (!d.isFollowingVehicle()) return null

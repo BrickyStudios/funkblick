@@ -58,4 +58,8 @@ val BLE_COMPANIES = mapOf(
     0x0171 to "Amazon",
     0x009E to "Bose",
     0x012D to "Sony",
+    0x04EC to "Motorola Solutions",
+    0x0D53 to "Luxottica (Ray-Ban Meta)",
+    0x03C2 to "Snap (Spectacles)",
+    0x060C to "Vuzix",
 )

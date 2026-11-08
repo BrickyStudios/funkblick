@@ -108,6 +108,26 @@ class ClassifierTest {
             assertEquals(n, Category.CAR, c.classify(wifi("3A:00:00:00:00:2C", n), emptyList()).category)
     }
 
+    @Test fun axonGearBehindARandomAddress() {
+        // signatures after RF Sentinel / all-cameras-are-beacons; addresses invented
+        val cam = c.classify(ble("C6:00:00:00:00:30", mfg = mapOf(0x0999 to b(0x01) + "BWCDEVICE".toByteArray())), emptyList())
+        assertEquals(Category.PRIORITY, cam.category)
+        assertEquals("Axon Enterprise", cam.vendor)
+        assertEquals(Category.PRIORITY, c.classify(ble("C6:00:00:00:00:31", uuids = setOf(0xFE6B)), emptyList()).category)
+        assertEquals(Category.PRIORITY, c.classify(ble("C6:00:00:00:00:32", mfg = mapOf(0x034D to b(1, 2, 3, 4, 5, 6, 7))), emptyList()).category)
+        // a cheap IDO watch repeats its own address under TASER's company id
+        val watch = c.classify(ble("C6:00:00:00:00:33", name = "ID205L", mfg = mapOf(0x034D to b(0xC6, 0, 0, 0, 0, 0x33, 1))), emptyList())
+        assertTrue(watch.category != Category.PRIORITY)
+        assertEquals("Axon Enterprise", c.classify(wifi("D8:1F:65:00:00:34", "x"), emptyList()).vendor) // IEEE: private block
+    }
+
+    @Test fun glassesAndDronesAreCameras() {
+        assertEquals(Category.CAMERA, c.classify(ble(mfg = mapOf(0x0D53 to b(1))), emptyList()).category) // Ray-Ban Meta
+        val remoteId = ByteArray(27).also { it[0] = 0x0D }
+        assertEquals(Category.CAMERA, c.classify(ble(sd = mapOf(0xFFFA to remoteId)), emptyList()).category)
+        assertEquals(Category.UNKNOWN, c.classify(ble(sd = mapOf(0xFFFA to b(1, 2))), emptyList()).category) // not a Remote ID message
+    }
+
     @Test fun aTvWithACarSuppliersChipIsATv() {
         // LG Innotek builds car modules and TV radios alike; the name settles it
         assertEquals(Category.HOME, c.classify(ble("00:05:C9:00:00:2D", "[LG] webOS TV 1021"), emptyList()).category)
@@ -385,6 +405,13 @@ class PoliceTest {
         assertNull(session.devices.values.single().police) // mute wins
         session.reclassify(emptyList())
         assertNull(session.devices.values.single().police) // deleting the mark takes it back
+    }
+
+    @Test fun axonNetworkNamesAreProbablyPolice() {
+        val session = Session(Classifier(realOui)) { clock }
+        for ((i, n) in listOf("Axon12-5g", "AB3-X10023", "AXON-1024").withIndex())
+            session.add(Sighting(Radio.WIFI, "3A:00:00:00:00:3$i", n, -70, clock, 5180, Security.WPA2), emptyList(), traffic)
+        assertTrue(session.devices.values.all { it.police?.level == PoliceLevel.PROBABLE })
     }
 
     @Test fun anOrdinaryCarIsNothing() {

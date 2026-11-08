@@ -134,6 +134,6 @@ fun AlertReason.label(): String = when (this) {
     AlertReason.POLICE_PROBABLE -> tr("Wahrscheinlich Polizei in der Nähe", "Probably police nearby")
     AlertReason.PRIORITY -> tr("Mögliche Behörden-/Einsatztechnik in der Nähe", "Possible public safety gear nearby")
     AlertReason.VEHICLE_FOLLOWING -> tr("Ein Fahrzeug fährt seit Minuten mit dir", "A vehicle has been with you for minutes")
-    AlertReason.CAMERA -> tr("Kamera-WLAN in der Nähe", "Camera Wi-Fi nearby")
+    AlertReason.CAMERA -> tr("Kamera in der Nähe", "Camera nearby")
     AlertReason.FLEET -> tr("Fahrzeug-/Mobilfunkrouter in der Nähe", "Vehicle / cellular router nearby")
 }

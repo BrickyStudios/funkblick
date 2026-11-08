@@ -95,7 +95,7 @@ Car mode also counts vehicles that come along: a car's Wi-Fi seen at three place
 
 All of this is **off by default**. Turning it on shows a warning first: German law (§ 23 Abs. 1c StVO) forbids drivers to use functions that point out traffic enforcement, 75 € and a point, also when a passenger's phone warns for the driver. Switzerland bans speed camera warnings altogether. Funkblick is meant for the passenger seat.
 
-"Possible public safety gear" means a body cam or vehicle maker (Axon, Motorola Solutions, WatchGuard, Getac …) showed up in Wi-Fi or Bluetooth. Vehicle routers (Cradlepoint, Sierra Wireless, Teltonika, Inseego …) sit in police cars, but also in buses, ambulances and delivery vans. A maker match only tells you who built the hardware.
+"Possible public safety gear" means a body cam or vehicle maker (Axon, Motorola Solutions, WatchGuard, Getac …) showed up in Wi-Fi or Bluetooth. Vehicle routers (Cradlepoint, Sierra Wireless, Teltonika, Inseego …) sit in police cars, but also in buses, ambulances and delivery vans. A maker match only tells you who built the hardware. Axon gear is also recognised behind a random Bluetooth address, by its "BWCDEVICE" tag and its Axon/TASER service ids; camera glasses (Ray-Ban Meta, Spectacles, Vuzix) and drones sending Remote ID count as cameras. These signatures follow [RF Sentinel](https://github.com/CIS-C0/RFSentinel) (GPL-3.0), which has more of them, and the all-cameras-are-beacons reference (Apache-2.0).
 
 ### Sound in the car, Android Auto
 
@@ -152,4 +152,4 @@ Mehr auf der [deutschen Website](https://brickystudios.github.io/funkblick/de/):
 
 ## License
 
-GPL-3.0. Maker data © IEEE, speed cameras © OpenStreetMap contributors (ODbL), fonts Chakra Petch and IBM Plex Mono (OFL). Not affiliated with Apple, Google, Samsung, Blitzer.de or SØPHIA.
+GPL-3.0. Maker data © IEEE, speed and traffic cameras © OpenStreetMap contributors (ODbL), Axon, glasses and drone signatures after RF Sentinel (GPL-3.0), fonts Chakra Petch and IBM Plex Mono (OFL). Not affiliated with Apple, Google, Samsung, Blitzer.de or SØPHIA.
