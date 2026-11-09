@@ -102,15 +102,21 @@ class Guide(val route: Route) {
     private var near = -1
     private var off = 0
     private var arrived = false
+    private var joined = false // been on the route once
+    private var startGap = -1.0 // how far from the route the first fix was (a car park, a driveway)
     /** metres along the route at the last update */
     var along = 0.0; private set
 
     fun update(lat: Double, lon: Double, speedKmh: Float?): Progress {
         val shape = route.shape
         val (dist, along) = if (shape.size < 2) distanceMeters(lat, lon, shape[0].first, shape[0].second) to 0.0 else snap(lat, lon)
-        off = if (dist > OFF_ROUTE_M) off + 1 else 0
+        // the route starts at the road, not where you parked: until you reach it, only driving away counts as leaving it
+        if (startGap < 0) startGap = dist
+        if (dist <= OFF_ROUTE_M) joined = true
+        off = if (dist > (if (joined) OFF_ROUTE_M else startGap + 100)) off + 1 else 0
         this.along = along
-        val idx = route.maneuvers.indexOfFirst { it.type !in 1..3 && route.cum[it.at.coerceIn(0, shape.lastIndex)] > along + 5 }
+        // the next thing worth saying: silent steps ("continue on", a new street name) don't hide the turn behind them
+        val idx = route.maneuvers.indexOfFirst { clipFor(it) != null && route.cum[it.at.coerceIn(0, shape.lastIndex)] > along + 5 }
         val m = route.maneuvers.getOrNull(idx)
         val toNext = m?.let { route.cum[it.at.coerceIn(0, shape.lastIndex)] - along } ?: 0.0
         val left = (route.meters - along).coerceAtLeast(0.0)
@@ -138,7 +144,7 @@ class Guide(val route: Route) {
      * The nearest camera standing at the route ahead (at most [sideM] beside it) within [maxM] of road, with the road
      * distance. A camera on a parallel street or one you already passed doesn't count, unlike a plain radius.
      */
-    fun camOnRoute(cams: List<SpeedCam>, maxM: Double, sideM: Double = 25.0): CamAhead? {
+    fun camOnRoute(cams: List<SpeedCam>, maxM: Double, sideM: Double = 15.0): CamAhead? { // 15 m: not the other carriageway
         val shape = route.shape
         if (shape.size < 2) return null
         var best: CamAhead? = null
@@ -166,7 +172,10 @@ class Guide(val route: Route) {
         val shape = route.shape
         val kx = 111_320.0 * cos(Math.toRadians(lat)); val ky = 111_320.0
         var best = Double.MAX_VALUE; var bestSeg = seg; var bestT = 0.0
-        for (i in maxOf(0, seg - 3)..minOf(shape.size - 2, seg + 80)) {
+        // back by distance, not by points: one stray fix ahead must not strand the next good ones behind the window
+        var from = seg
+        while (from > 0 && route.cum[seg] - route.cum[from - 1] <= 150) from--
+        for (i in from..minOf(shape.size - 2, seg + 80)) {
             val ax = (shape[i].second - lon) * kx; val ay = (shape[i].first - lat) * ky
             val bx = (shape[i + 1].second - lon) * kx; val by = (shape[i + 1].first - lat) * ky
             val dx = bx - ax; val dy = by - ay

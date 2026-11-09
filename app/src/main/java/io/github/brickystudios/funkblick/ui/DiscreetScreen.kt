@@ -53,8 +53,8 @@ fun DiscreetScreen(onExit: () -> Unit) {
     }
     Box(Modifier.fillMaxSize().background(Color(0xFFF4F1EA))) {
         FunkMap(Modifier.fillMaxSize(), look = MapLook.LIGHT, follow = true)
-        // catches every tap so the map stays put and three quick taps can end the mode
-        Box(Modifier.fillMaxSize().pointerInput(Unit) {
+        // catches every tap so the map stays put and three quick taps can end the mode; not under the search, taps would fall through
+        if (!searching) Box(Modifier.fillMaxSize().pointerInput(Unit) {
             detectTapGestures {
                 val t = System.currentTimeMillis()
                 taps = taps.filter { t - it < 900 } + t

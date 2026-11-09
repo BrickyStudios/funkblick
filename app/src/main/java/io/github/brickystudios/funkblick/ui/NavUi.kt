@@ -67,13 +67,14 @@ private fun meters(m: Double) = if (m < 1000) "${(m / 10).roundToInt() * 10} m" 
 fun NavBanner(light: Boolean, modifier: Modifier = Modifier) {
     val nav by Nav.state.collectAsStateWithLifecycle()
     val fix by Funk.fix.collectAsStateWithLifecycle()
+    val running by Funk.running.collectAsStateWithLifecycle()
     val n = nav ?: return
     val c = look(light)
     val p = n.progress
     val m = p?.next
     Row(modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(c.card).padding(start = 16.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        if (m != null && !p.arrived && n.error == null) Text(arrow(m.type), color = c.accent, fontSize = 40.sp, modifier = Modifier.width(52.dp))
+        if (m != null && !p.arrived) Text(arrow(m.type), color = c.accent, fontSize = 40.sp, modifier = Modifier.width(52.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             when {
                 p?.arrived == true -> Text(tr("Ziel erreicht", "You have arrived"), color = c.ink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -82,8 +83,10 @@ fun NavBanner(light: Boolean, modifier: Modifier = Modifier) {
                     Text(m.text, color = c.ink, fontSize = 16.sp, lineHeight = 20.sp, maxLines = 2)
                     val eta = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(System.currentTimeMillis() + (p.leftSeconds * 1000).toLong()))
                     Text(tr("${meters(p.left)} · Ankunft $eta", "${meters(p.left)} · arrive $eta"), color = c.dim, fontSize = 14.sp)
+                    n.error?.let { Text(it, color = c.accent, fontSize = 14.sp, lineHeight = 18.sp) } // a failed new route, while off the old one
                 }
                 n.error != null -> Text(n.error, color = c.ink, fontSize = 16.sp, lineHeight = 20.sp)
+                !running -> Text(tr("Startet, sobald der Scan läuft", "Starts once the scan runs"), color = c.ink, fontSize = 18.sp)
                 fix == null -> Text(tr("Warte auf GPS", "Waiting for GPS"), color = c.ink, fontSize = 18.sp)
                 else -> Text(tr("Route nach ${n.dest.name} …", "Route to ${n.dest.name} …"), color = c.ink, fontSize = 18.sp, maxLines = 2)
             }
@@ -175,8 +178,8 @@ fun DestinationSearch(light: Boolean, onClose: () -> Unit) {
                     "⌂ next to a result saves it as home. It stays on this phone only."), color = c.dim, fontSize = 14.sp, modifier = Modifier.padding(vertical = 8.dp))
             }
         }
-        Text(tr("Suche über Photon (komoot), Route über FOSSGIS (OpenStreetMap Deutschland). Beide erfahren Start und Ziel, Funkblick speichert es nicht. Kartendaten © OpenStreetMap.",
-            "Search by Photon (komoot), routes by FOSSGIS (OpenStreetMap Germany). Both learn start and destination; Funkblick doesn't keep them. Map data © OpenStreetMap."),
+        Text(tr("Suche über Photon (komoot, sieht den Suchbegriff und grob deinen Ort), Route über FOSSGIS (OpenStreetMap Deutschland, sieht Start und Ziel). In Logs und Exporte kommt davon nichts. Kartendaten © OpenStreetMap.",
+            "Search by Photon (komoot, sees the query and roughly where you are), routes by FOSSGIS (OpenStreetMap Germany, sees start and destination). None of it goes into logs or exports. Map data © OpenStreetMap."),
             color = c.dim, fontSize = 13.sp, lineHeight = 18.sp)
     }
 }

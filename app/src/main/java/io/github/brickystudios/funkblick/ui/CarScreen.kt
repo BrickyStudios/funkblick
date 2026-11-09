@@ -161,6 +161,8 @@ fun CarScreen(running: Boolean, onStart: () -> Unit, onEnableTraffic: () -> Unit
                 BigButton(if (running) tr("Fahrt beenden", "End drive") else tr("Schließen", "Close"), filled = false, height = 64, modifier = Modifier.weight(1f), onClick = onClose)
             }
             if (settings.traffic) TextAction(if (refreshing) tr("Blitzer werden geladen", "Loading speed cameras") else tr("Blitzer der Region aktualisieren", "Refresh speed cameras for this region"), color = C.dim) {
+                // this asks Overpass for your region: the same privacy switch as map data and navigation
+                if (!settings.mapData) { Toast.makeText(context, tr("Braucht „Kartendaten aus dem Netz laden“ (unter Mehr).", "Needs \"Load map data from the network\" (under More)."), Toast.LENGTH_LONG).show(); return@TextAction }
                 val f = fix ?: run { Toast.makeText(context, tr("Erst braucht es eine GPS-Position.", "Needs a GPS position first."), Toast.LENGTH_LONG).show(); return@TextAction }
                 if (refreshing) return@TextAction
                 refreshing = true

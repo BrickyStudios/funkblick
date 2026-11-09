@@ -96,7 +96,7 @@ fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetu
         BigButton(tr("WLAN-Kanäle für deinen Router", "Wi-Fi channels for your router"), filled = false, color = C.dim, onClick = onChannels)
 
         Header(tr("Warnungen", "Alerts"))
-        Toggle(tr("Ton", "Sound"), tr("Eigener Ton für jede Art von Warnung", "Its own signal for every kind of alert"), s.sound) { v -> Funk.updateSettings { it.copy(sound = v) } }
+        Toggle(tr("Ton", "Sound"), tr("Eigener Ton für jede Art von Warnung; aus schweigen auch die Navigationsansagen", "Its own signal for every kind of alert; off also mutes navigation"), s.sound) { v -> Funk.updateSettings { it.copy(sound = v) } }
         Toggle(tr("Sprachansage", "Voice"), tr("„Blitzer voraus“, „Tracker ist bei dir“ …", "\"Speed camera ahead\", \"tracker with you\" ..."), s.voice) { v -> Funk.updateSettings { it.copy(voice = v) } }
         Toggle(tr("Vibration", "Vibration"), null, s.vibrate) { v -> Funk.updateSettings { it.copy(vibrate = v) } }
         Toggle(tr("Tracker-Schutz", "Tracker protection"), tr("Warnt, wenn ein AirTag, SmartTag, Tile & Co. über 10 Minuten mit dir unterwegs ist", "Warns when an AirTag, SmartTag, Tile & co. stays with you for over 10 minutes"), s.trackers) { v -> Funk.updateSettings { it.copy(trackers = v) } }
@@ -144,10 +144,10 @@ fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetu
         Toggle(tr("Sicherer Modus für Exporte und Logs", "Safe mode for exports and logs"), tr("Kürzt Adressen auf den Hersteller-Teil, versteckt Namen von Heimnetzen und Handys, rundet Positionen auf ca. 1 km", "Cuts addresses to the maker part, hides names of home networks and phones, rounds positions to about 1 km"), s.safeMode) { v -> Funk.updateSettings { it.copy(safeMode = v) } }
         Toggle(tr("Bildschirm schwärzen", "Mask the screen"), tr("Dasselbe auf dem Bildschirm, für Screenshots", "The same on screen, for screenshots"), s.safeScreen) { v -> Funk.updateSettings { it.copy(safeScreen = v) } }
         Toggle(tr("Logs speichern", "Keep logs"), tr("Jede Sitzung landet als JSON auf dem Handy, nur auf dem Handy", "Every session is saved as JSON on the phone, only there"), s.log) { v -> Funk.updateSettings { it.copy(log = v) } }
-        Toggle(tr("Kartendaten aus dem Netz laden", "Load map data from the network"), tr("Jeder Kartenabruf verrät dem Kartenserver grob, wo du bist. Aus: nur offline gespeicherte Gebiete.",
-            "Every map request tells the map server roughly where you are. Off: only areas saved for offline use."), s.mapData) { v ->
+        Toggle(tr("Kartendaten aus dem Netz laden", "Load map data from the network"), tr("Jeder Kartenabruf verrät dem Kartenserver grob, wo du bist. Aus: nur offline gespeicherte Gebiete, keine Navigation, kein Blitzer-Update.",
+            "Every map request tells the map server roughly where you are. Off: only areas saved for offline use, no navigation, no speed camera refresh."), s.mapData) { v ->
             Funk.updateSettings { it.copy(mapData = v) }
-            org.maplibre.android.MapLibre.setConnected(v)
+            initMap(context) // starts MapLibre if no map was shown yet (setConnected alone crashed then), applies the switch
         }
         Toggle("Bluetooth", tr("Aus = nur WLAN, spart Akku", "Off = Wi-Fi only, saves battery"), s.ble) { v -> Funk.updateSettings { it.copy(ble = v) } }
 

@@ -97,6 +97,8 @@ private const val SRC_GRID = "fb-grid"
 private const val SRC_ROUTE = "fb-route"
 const val LAYER_NOTABLE = "fb-notable"
 const val LAYER_OTHER = "fb-other"
+private const val LAYER_OTHER_CLUSTER = "fb-other-cluster"
+private const val LAYER_OTHER_COUNT = "fb-other-count"
 const val LAYER_NEAR = "fb-near"
 
 private fun addOverlay(style: Style, light: Boolean) {
@@ -125,9 +127,9 @@ private fun addOverlay(style: Style, light: Boolean) {
     style.addLayer(CircleLayer("fb-traffic", SRC_TRAFFIC).withProperties(P.circleColor(Expression.toColor(Expression.get("c"))), P.circleRadius(5f),
         P.circleStrokeColor("#0D0C0A"), P.circleStrokeWidth(1.5f)))
     style.addLayer(CircleLayer("fb-cams", SRC_CAMS).withProperties(P.circleColor("#FF4D5E"), P.circleRadius(7f), P.circleStrokeColor("#F2E8D5"), P.circleStrokeWidth(2f)))
-    style.addLayer(CircleLayer("fb-other-cluster", SRC_OTHER).withFilter(Expression.has("point_count")).withProperties(
+    style.addLayer(CircleLayer(LAYER_OTHER_CLUSTER, SRC_OTHER).withFilter(Expression.has("point_count")).withProperties(
         P.circleColor("#2A2418"), P.circleRadius(14f), P.circleStrokeColor("#6B5A3A"), P.circleStrokeWidth(1f)).also { it.minZoom = 15f })
-    style.addLayer(SymbolLayer("fb-other-count", SRC_OTHER).withFilter(Expression.has("point_count")).withProperties(
+    style.addLayer(SymbolLayer(LAYER_OTHER_COUNT, SRC_OTHER).withFilter(Expression.has("point_count")).withProperties(
         P.textField(Expression.toString(Expression.get("point_count"))), P.textFont(arrayOf("Noto Sans Regular")), P.textSize(12f),
         P.textColor("#F2E8D5"), P.textAllowOverlap(true)).also { it.minZoom = 15f })
     style.addLayer(CircleLayer(LAYER_OTHER, SRC_OTHER).withFilter(Expression.not(Expression.has("point_count"))).withProperties(
@@ -195,8 +197,6 @@ private fun update(style: Style, devices: List<Device>, fix: Fix?, track: List<F
     src(SRC_NEAR)?.setGeoJson(FeatureCollection.fromFeatures(if (!nearby || fix == null) emptyList() else devices
         .filter { it.pos == null && !it.own && it.cls.mute == null && newest - it.lastSeen < 60_000 }
         .map { d -> spotAt(fix.lat, fix.lon, distanceFromRssi(d.rssi).coerceIn(25.0, 200.0), angle(d.id).toDouble()).let { (la, lo) -> d.feature(la, lo) } }))
-    // with "All devices" the bundled others show before street zoom too
-    for (id in listOf("fb-other-cluster", "fb-other-count", LAYER_OTHER)) style.getLayer(id)?.minZoom = if (nearby) 0f else 15f
     devices.firstOrNull { it.id == selected }?.pos?.let { p -> rings += ring(p.lat, p.lon, p.radiusM, "#F2E8D5") }
     src(SRC_RING)?.setGeoJson(FeatureCollection.fromFeatures(rings))
 }
@@ -247,6 +247,10 @@ fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow:
             map = m
             m.uiSettings.isCompassEnabled = false
             m.uiSettings.isAttributionEnabled = true // © OpenStreetMap stays visible, as the licence asks
+            // discreet mode has its "Where to?" bar along the bottom: the attribution button sits above it
+            if (look == MapLook.LIGHT) with(context.resources.displayMetrics) {
+                m.uiSettings.setAttributionMargins((16 * density).toInt(), 0, 0, (96 * density).toInt())
+            }
             m.uiSettings.isLogoEnabled = false
             m.addOnCameraMoveStartedListener { reason -> if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) lost() }
             m.addOnMapClickListener { ll ->
@@ -273,6 +277,9 @@ fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow:
         style?.getSourceAs<GeoJsonSource>(SRC_ROUTE)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(route?.let { r ->
             Feature.fromGeometry(LineString.fromLngLats(r.shape.map { (la, lo) -> Point.fromLngLat(lo, la) }))
         })))
+    }
+    LaunchedEffect(style, nearby) { // with "All devices" the bundled others show before street zoom too
+        style?.let { s -> for (id in listOf(LAYER_OTHER_CLUSTER, LAYER_OTHER_COUNT, LAYER_OTHER)) s.getLayer(id)?.minZoom = if (nearby) 0f else 15f }
     }
     LaunchedEffect(style, devices, fix, track, selected, offline, nearby) {
         style?.let { update(it, devices, fix, track, selected, offline, nearby) }

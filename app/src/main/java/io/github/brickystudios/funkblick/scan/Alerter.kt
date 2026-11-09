@@ -38,16 +38,20 @@ class Alerter(private val context: Context) {
     private val audio = context.getSystemService(AudioManager::class.java)
     private var focus: AudioFocusRequest? = null
     private var busyUntil = 0L
-    private val lengths = HashMap<String, Long>()
+    private val lengths = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
     init {
         val lang = if (isGerman()) "de" else "en"
         for (name in context.assets.list("sounds").orEmpty()) {
             val key = name.removeSuffix(".ogg")
-            if (key.startsWith("tone_") || key.startsWith("${lang}_")) context.assets.openFd("sounds/$name").use { fd ->
-                ids[key] = pool.load(fd, 1)
-                // navigation is said in pieces ("In 300 Metern" + "rechts abbiegen"): each piece's length chains them
-                if ("_nav_" in key) runCatching {
+            if (key.startsWith("tone_") || key.startsWith("${lang}_")) context.assets.openFd("sounds/$name").use { ids[key] = pool.load(it, 1) }
+        }
+        // navigation is said in pieces ("In 300 Metern" + "rechts abbiegen"): each piece's length chains them. Measured off the
+        // main thread, the scan service starts in onCreate; until then a piece counts as 1.2 s
+        val navClips = ids.keys.filter { "_nav_" in it }
+        Thread {
+            for (key in navClips) runCatching {
+                context.assets.openFd("sounds/$key.ogg").use { fd ->
                     val r = android.media.MediaMetadataRetriever() // AutoCloseable only from Android 10, so release() by hand
                     try {
                         r.setDataSource(fd.fileDescriptor, fd.startOffset, fd.length)
@@ -55,7 +59,7 @@ class Alerter(private val context: Context) {
                     } finally { r.release() }
                 }
             }
-        }
+        }.start()
         val nm = context.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CHANNEL_ALERTS, tr("Warnungen", "Alerts"), NotificationManager.IMPORTANCE_HIGH).apply {
             setSound(null, null) // Funkblick plays its own sounds, the channel only shows
@@ -79,12 +83,16 @@ class Alerter(private val context: Context) {
         if (s.vibrate && voice) vibrate(kind)
     }
 
-    /** Navigation: clip keys (nav_*) one after another, no tone. Waits for an alert that is still talking. */
+    /**
+     * Navigation: clip keys (nav_*) one after another, no tone. Waits for an alert that is still talking; a "now, turn"
+     * that would come more than 1.5 s late is dropped, it would send you into the wrong street. Only the master sound
+     * switch mutes it, not the alert voice.
+     */
     fun say(keys: List<String>) {
-        val s = Funk.settings.value
-        if (!s.sound || !s.voice || keys.isEmpty()) return
+        if (!Funk.settings.value.sound || keys.isEmpty()) return
         val now = System.currentTimeMillis()
         var at = maxOf(0L, busyUntil - now)
+        if (keys.first() == "nav_now" && at > 1500) return
         main.postDelayed({ duck() }, at)
         for (k in keys) {
             val key = langKey(k)

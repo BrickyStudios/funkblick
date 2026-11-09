@@ -140,7 +140,7 @@ class ScanService : Service() {
             if (ticks % 60 == 59) Funk.saveLog()
             // Android quietly downgrades a long BLE scan to "opportunistic" (only other apps' results, no error):
             // both drives on 09.11. went deaf exactly 10 min after the start. A fresh scan every 4 min stays below that.
-            if (ticks % 240 == 239 && bleFiltered != null) { stopBle(); startBle() }
+            if (ticks % 240 == 239 && bleFiltered != null) { stopBle(); if (Funk.settings.value.ble) startBle() }
             ticks++
             main.postDelayed(this, 1000)
         }
@@ -320,9 +320,11 @@ class ScanService : Service() {
         Funk.fix.value = f
         Funk.addToTrack(f)
         Funk.diag.value = Funk.diag.value.let { it.copy(fixes = it.fixes + 1) }
-        val say = Nav.onFix(f) // first: the speed camera check below uses where this fix is on the route
+        // navigation follows real GPS only: a cell or Wi-Fi fix can be hundreds of metres off and would cause a new route
+        val gps = l.provider == LocationManager.GPS_PROVIDER || (l.hasAccuracy() && l.accuracy <= 30f)
+        val say = if (gps) Nav.onFix(f) else emptyList() // first: the speed camera check below uses where this fix is on the route
+        alerter.say(say) // before the camera check, so a turn never waits behind an alert
         checkSpeedCam(f)
-        alerter.say(say)
     }
 
     @SuppressLint("MissingPermission")

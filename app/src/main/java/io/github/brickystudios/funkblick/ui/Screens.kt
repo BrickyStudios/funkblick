@@ -78,6 +78,7 @@ import io.github.brickystudios.funkblick.core.tripStats
 import io.github.brickystudios.funkblick.core.TrackPoint
 import io.github.brickystudios.funkblick.scan.ScanService
 import io.github.brickystudios.funkblick.scan.Funk
+import io.github.brickystudios.funkblick.scan.Nav
 import kotlinx.coroutines.delay
 
 /** Ticks once a second so "3 s ago" and the session clock stay current. */
@@ -197,6 +198,7 @@ fun LiveScreen(running: Boolean, demo: Boolean, onStart: () -> Unit, onStop: () 
     val settings by Funk.settings.collectAsStateWithLifecycle()
     val fix by Funk.fix.collectAsStateWithLifecycle()
     val track by Funk.track.collectAsStateWithLifecycle()
+    val navOn = Nav.state.collectAsStateWithLifecycle().value != null
     val now = rememberNow()
     val m = remember(settings.safeScreen) { Funk.screenMasker() }
     val top = notable(devices)
@@ -221,6 +223,8 @@ fun LiveScreen(running: Boolean, demo: Boolean, onStart: () -> Unit, onStop: () 
                 }
             }
         }
+        // left car or discreet mode while a route runs: the turn and the way to end it stay in reach
+        if (navOn) item { NavBanner(light = false) }
         if (miss != null) item {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(C.red.copy(alpha = 0.14f))
                 .clickable(role = Role.Button) { runCatching { context.startActivity(miss.second) } }.heightIn(min = 48.dp).padding(16.dp),

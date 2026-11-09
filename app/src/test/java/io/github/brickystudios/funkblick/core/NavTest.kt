@@ -80,4 +80,43 @@ class NavTest {
         val onRoad = SpeedCam(a.first + metersToLat(900.0), a.second + metersToLon(8.0, a.first), 50)   // pole next to the road
         assertEquals(onRoad, g.camOnRoute(listOf(afterTurn, onRoad), 800.0)!!.cam)                        // the nearer one wins
     }
+
+    @Test fun startingInACarParkDoesNotRerouteForever() {
+        val g = Guide(route)
+        val park = a.second + metersToLon(70.0, a.first) // 70 m beside the road the route starts on
+        assertFalse((1..10).map { g.update(a.first, park, 0f).offRoute }.any { it })
+        assertFalse(g.update(a.first + metersToLat(20.0), a.second, 20f).offRoute) // on the road now
+        val away = a.second + metersToLon(100.0, a.first)
+        assertTrue((1..3).map { g.update(a.first + metersToLat(300.0), away, 50f).offRoute }.last())
+        val g2 = Guide(route) // driving off the other way from the car park still counts
+        g2.update(a.first, park, 0f)
+        assertTrue((1..4).map { g2.update(a.first, a.second + metersToLon(250.0, a.first), 30f).offRoute }.last())
+    }
+
+    @Test fun oneOutlierFixAheadDoesNotStrandTheGuide() {
+        val pts = (0..100).map { a.first + metersToLat(it * 10.0) to a.second }
+        val g = Guide(Route(pts, listOf(Maneuver(1, "Start", 0), Maneuver(4, "Ziel", 100)), 120.0))
+        g.update(a.first + metersToLat(100.0), a.second, 50f)
+        g.update(a.first + metersToLat(250.0), a.second + metersToLon(30.0, a.first), null) // a cell fix 150 m ahead
+        val flags = listOf(114.0, 128.0, 142.0).map { g.update(a.first + metersToLat(it), a.second, 50f).offRoute }
+        assertEquals(listOf(false, false, false), flags)
+    }
+
+    @Test fun aSilentStepBeforeTheTurnDoesNotSwallowItsAnnouncement() {
+        val p900 = a.first + metersToLat(900.0) to a.second
+        val r = Route(listOf(a, p900, b, c), listOf(Maneuver(1, "Start", 0), Maneuver(8, "Weiter auf B 4", 1),
+            Maneuver(10, "Rechts abbiegen", 2), Maneuver(4, "Ziel", 3)), 120.0)
+        val g = Guide(r)
+        val said = mutableListOf<List<String>>()
+        var m = 0.0
+        while (m <= 1000) { g.update(a.first + metersToLat(m), a.second, 50f).say.takeIf { it.isNotEmpty() }?.let { said += it }; m += 50 / 3.6 }
+        assertEquals(listOf(listOf("nav_d300", "nav_right"), listOf("nav_now", "nav_right")), said)
+    }
+
+    @Test fun everyNavClipHasASoundInBothLanguages() {
+        val have = java.io.File("src/main/assets/sounds").list()!!.map { it.removeSuffix(".ogg") }.toSet()
+        val keys = (0..40).flatMap { t -> (0..7).mapNotNull { e -> clipFor(Maneuver(t, "", 0, e.takeIf { it > 0 })) } }.toSet() +
+            listOf("nav_now", "nav_arrived", "nav_start", "nav_reroute") + listOf(100, 200, 300, 500, 800, 1000, 2000).map { "nav_d$it" }
+        for (lang in listOf("de", "en")) for (k in keys) assertTrue("${lang}_$k", "${lang}_$k" in have)
+    }
 }
