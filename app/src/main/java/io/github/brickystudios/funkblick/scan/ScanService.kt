@@ -109,6 +109,7 @@ class ScanService : Service() {
         runCatching { unregisterReceiver(screen) }
         runCatching { unregisterReceiver(radios) }
         radioBack(bt = true); radioBack(bt = false)
+        Nav.stop() // the route runs on the scan's GPS; ending the drive ends it
         stopBle()
         runCatching { getSystemService(LocationManager::class.java).removeUpdates(location) }
         if (Funk.running.value) {
@@ -319,6 +320,7 @@ class ScanService : Service() {
         Funk.addToTrack(f)
         Funk.diag.value = Funk.diag.value.let { it.copy(fixes = it.fixes + 1) }
         checkSpeedCam(f)
+        alerter.say(Nav.onFix(f))
     }
 
     @SuppressLint("MissingPermission")

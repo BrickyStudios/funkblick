@@ -35,6 +35,43 @@ LINES = {
     "hacker": ("Achtung. Hacker-Werkzeug in der Nähe.", "Warning. Hacking tool nearby."),
 }
 
+# Navigation is said in two pieces, "In 300 Metern" + "rechts abbiegen" (Alerter.say chains them). Build: "nav".
+NAV = {
+    "nav_start": ("Route berechnet. Los geht's.", "Route ready. Let's go."),
+    "nav_reroute": ("Neue Route.", "New route."),
+    "nav_arrived": ("Du hast dein Ziel erreicht.", "You have arrived."),
+    "nav_now": ("Jetzt", "Now,"),
+    "nav_d100": ("In hundert Metern", "In one hundred meters,"),
+    "nav_d200": ("In zweihundert Metern", "In two hundred meters,"),
+    "nav_d300": ("In dreihundert Metern", "In three hundred meters,"),
+    "nav_d500": ("In fünfhundert Metern", "In five hundred meters,"),
+    "nav_d800": ("In achthundert Metern", "In eight hundred meters,"),
+    "nav_d1000": ("In einem Kilometer", "In one kilometer,"),
+    "nav_d2000": ("In zwei Kilometern", "In two kilometers,"),
+    "nav_dest": ("erreichst du dein Ziel.", "you reach your destination."),
+    "nav_right": ("rechts abbiegen.", "turn right."),
+    "nav_left": ("links abbiegen.", "turn left."),
+    "nav_slight_right": ("halb rechts abbiegen.", "bear right."),
+    "nav_slight_left": ("halb links abbiegen.", "bear left."),
+    "nav_sharp_right": ("scharf rechts abbiegen.", "turn sharp right."),
+    "nav_sharp_left": ("scharf links abbiegen.", "turn sharp left."),
+    "nav_uturn": ("wenden.", "make a U-turn."),
+    "nav_straight": ("geradeaus weiterfahren.", "continue straight."),
+    "nav_keep_right": ("rechts halten.", "keep right."),
+    "nav_keep_left": ("links halten.", "keep left."),
+    "nav_exit_right": ("die Ausfahrt rechts nehmen.", "take the exit on the right."),
+    "nav_exit_left": ("die Ausfahrt links nehmen.", "take the exit on the left."),
+    "nav_ramp_right": ("rechts auf die Auffahrt.", "take the ramp on the right."),
+    "nav_ramp_left": ("links auf die Auffahrt.", "take the ramp on the left."),
+    "nav_merge": ("einfädeln.", "merge."),
+    "nav_round": ("in den Kreisverkehr fahren.", "enter the roundabout."),
+    "nav_round1": ("im Kreisverkehr die erste Ausfahrt nehmen.", "at the roundabout, take the first exit."),
+    "nav_round2": ("im Kreisverkehr die zweite Ausfahrt nehmen.", "at the roundabout, take the second exit."),
+    "nav_round3": ("im Kreisverkehr die dritte Ausfahrt nehmen.", "at the roundabout, take the third exit."),
+    "nav_round4": ("im Kreisverkehr die vierte Ausfahrt nehmen.", "at the roundabout, take the fourth exit."),
+    "nav_round5": ("im Kreisverkehr die fünfte Ausfahrt nehmen.", "at the roundabout, take the fifth exit."),
+}
+
 
 def env(n, attack=0.004, release=0.08):
     """Linear attack, exponential release: clicks off, tail natural."""
@@ -128,6 +165,9 @@ def ogg(src, dst, filters=None):
 VOICE_FX = ("highpass=f=140,lowpass=f=7800,equalizer=f=2800:t=q:w=1.2:g=4,"
             "acompressor=threshold=-20dB:ratio=4:attack=5:release=80,aecho=0.8:0.6:22:0.12,loudnorm=I=-14:TP=-1.5:LRA=7")
 
+TRIM = ("silenceremove=start_periods=1:start_threshold=-45dB,areverse,"
+        "silenceremove=start_periods=1:start_threshold=-45dB,areverse")
+
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
@@ -140,13 +180,14 @@ def main():
             write_wav(tmp / f"{kind}.wav", x)
             ogg(tmp / f"{kind}.wav", OUT / f"tone_{kind}.ogg", "loudnorm=I=-14:TP=-1.5")
         for lang, voice, i in (("de", "de_DE-thorsten-high", 0), ("en", "en_US-ljspeech-high", 1)):
-            for kind, texts in LINES.items():
-                if only and kind not in only:
+            for kind, texts in {**LINES, **NAV}.items():
+                if only and kind not in only and not (kind in NAV and "nav" in only):
                     continue
                 raw = tmp / f"{lang}_{kind}.wav"
                 subprocess.run(["piper", "-m", str(VOICES / f"{voice}.onnx"), "-f", str(raw), "--length-scale", "0.92"],
                                input=texts[i].encode(), check=True, capture_output=True)
-                ogg(raw, OUT / f"{lang}_{kind}.ogg", VOICE_FX)
+                # pieces get their silence cut at both ends, so two of them sound like one sentence
+                ogg(raw, OUT / f"{lang}_{kind}.ogg", (TRIM + "," if kind in NAV else "") + VOICE_FX)
     total = sum(p.stat().st_size for p in OUT.iterdir())
     print(f"{OUT}: {len(list(OUT.iterdir()))} files, {total // 1024} KB")
 

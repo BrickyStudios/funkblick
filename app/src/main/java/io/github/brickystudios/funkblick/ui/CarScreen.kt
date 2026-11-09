@@ -56,6 +56,7 @@ import io.github.brickystudios.funkblick.core.WARN_METERS
 import io.github.brickystudios.funkblick.core.isFollowingVehicle
 import io.github.brickystudios.funkblick.core.tr
 import io.github.brickystudios.funkblick.scan.Funk
+import io.github.brickystudios.funkblick.scan.Nav
 import kotlinx.coroutines.launch
 
 /** Opens the official Blitzer.de app (free or PRO) if installed, otherwise their map in the browser. */
@@ -81,6 +82,8 @@ fun CarScreen(running: Boolean, onStart: () -> Unit, onEnableTraffic: () -> Unit
     val diag by Funk.diag.collectAsStateWithLifecycle()
     var refreshing by remember { mutableStateOf(false) }
     var follow by remember { mutableStateOf(true) }
+    var searching by remember { mutableStateOf(false) }
+    val nav by Nav.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val now = rememberNow()
     DisposableEffect(Unit) {
@@ -100,6 +103,7 @@ fun CarScreen(running: Boolean, onStart: () -> Unit, onEnableTraffic: () -> Unit
                 Radar(devices, running, Modifier.fillMaxHeight(), labels = false)
                 Text(tr("Warte auf GPS", "Waiting for GPS"), color = C.dim, fontSize = 15.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
             }
+            NavBanner(light = false, modifier = Modifier.align(Alignment.TopCenter).padding(8.dp))
         }
     }
     val bar = @Composable {
@@ -145,6 +149,8 @@ fun CarScreen(running: Boolean, onStart: () -> Unit, onEnableTraffic: () -> Unit
             }
             if (!running) BigButton(tr("Scan starten", "Start scan"), filled = true, height = 64, onClick = onStart)
             if (!settings.traffic) BigButton(tr("Verkehrs-Hinweise einschalten", "Turn on traffic alerts"), filled = false, color = C.red, height = 64, onClick = onEnableTraffic)
+            if (nav == null) BigButton(tr("Ziel eingeben", "Set destination"), filled = false, height = 64) { searching = true }
+            else BigButton(tr("Navigation beenden", "End navigation"), filled = false, color = C.text, height = 64) { Nav.stop() }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BigButton("Blitzer.de", filled = false, color = C.dim, height = 64, modifier = Modifier.weight(1f)) { openBlitzerDe(context) }
                 // ending the drive ends the scan too; the back gesture only leaves car mode
@@ -170,6 +176,7 @@ fun CarScreen(running: Boolean, onStart: () -> Unit, onEnableTraffic: () -> Unit
                 color = C.dim, fontSize = 13.sp, lineHeight = 18.sp)
         }
     }
+    if (searching) { DestinationSearch(light = false) { searching = false }; return }
     BoxWithConstraints(Modifier.fillMaxSize().background(C.ink).statusBarsPadding().navigationBarsPadding()) {
         if (maxWidth > maxHeight) Row(Modifier.fillMaxSize().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             view(Modifier.weight(1.3f).fillMaxHeight())

@@ -28,6 +28,7 @@ import io.github.brickystudios.funkblick.core.spotAt
 import io.github.brickystudios.funkblick.core.tr
 import io.github.brickystudios.funkblick.scan.Fix
 import io.github.brickystudios.funkblick.scan.Funk
+import io.github.brickystudios.funkblick.scan.Nav
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -40,6 +41,7 @@ import org.maplibre.android.style.layers.BackgroundLayer
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory as P
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonOptions
@@ -92,6 +94,7 @@ private const val SRC_NEAR = "fb-near"
 private const val SRC_ME = "fb-me"
 private const val SRC_RING = "fb-ring"
 private const val SRC_GRID = "fb-grid"
+private const val SRC_ROUTE = "fb-route"
 const val LAYER_NOTABLE = "fb-notable"
 const val LAYER_OTHER = "fb-other"
 const val LAYER_NEAR = "fb-near"
@@ -99,6 +102,7 @@ const val LAYER_NEAR = "fb-near"
 private fun addOverlay(style: Style, light: Boolean) {
     val empty = FeatureCollection.fromFeatures(emptyList())
     style.addSource(GeoJsonSource(SRC_GRID, empty))
+    style.addSource(GeoJsonSource(SRC_ROUTE, empty))
     style.addSource(GeoJsonSource(SRC_TRACK, empty))
     style.addSource(GeoJsonSource(SRC_CAMS, empty))
     style.addSource(GeoJsonSource(SRC_TRAFFIC, empty))
@@ -109,8 +113,11 @@ private fun addOverlay(style: Style, light: Boolean) {
     style.addSource(GeoJsonSource(SRC_NEAR, empty))
     style.addSource(GeoJsonSource(SRC_ME, empty))
     style.addLayer(LineLayer("fb-grid", SRC_GRID).withProperties(P.lineColor("#2A2418"), P.lineWidth(1f)))
+    // the route to drive: cream on the night map, the usual blue on the light one
+    style.addLayer(LineLayer("fb-route", SRC_ROUTE).withProperties(P.lineColor(if (light) "#3D7BE0" else "#F2E8D5"), P.lineWidth(6f),
+        P.lineOpacity(0.85f), P.lineCap(Property.LINE_CAP_ROUND), P.lineJoin(Property.LINE_JOIN_ROUND)))
     if (light) {
-        // discreet: only your own position, nothing that looks like a scanner
+        // discreet: only your own position and the route, nothing that looks like a scanner
         style.addLayer(CircleLayer("fb-me", SRC_ME).withProperties(P.circleColor("#3D7BE0"), P.circleRadius(8f), P.circleStrokeColor("#FFFFFF"), P.circleStrokeWidth(3f)))
         return
     }
@@ -260,6 +267,12 @@ fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow:
             }
             m.cameraPosition = CameraPosition.Builder().target(LatLng(fix?.lat ?: 51.1657, fix?.lon ?: 10.4515)).zoom(if (fix == null) 5.5 else 15.0).build() // no fix: all of Germany
         }
+    }
+    val route = Nav.state.collectAsStateWithLifecycle().value?.route
+    LaunchedEffect(style, route) { // apart from the per-second update: a long route is thousands of points
+        style?.getSourceAs<GeoJsonSource>(SRC_ROUTE)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(route?.let { r ->
+            Feature.fromGeometry(LineString.fromLngLats(r.shape.map { (la, lo) -> Point.fromLngLat(lo, la) }))
+        })))
     }
     LaunchedEffect(style, devices, fix, track, selected, offline, nearby) {
         style?.let { update(it, devices, fix, track, selected, offline, nearby) }

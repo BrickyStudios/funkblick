@@ -38,12 +38,23 @@ class Alerter(private val context: Context) {
     private val audio = context.getSystemService(AudioManager::class.java)
     private var focus: AudioFocusRequest? = null
     private var busyUntil = 0L
+    private val lengths = HashMap<String, Long>()
 
     init {
         val lang = if (isGerman()) "de" else "en"
         for (name in context.assets.list("sounds").orEmpty()) {
             val key = name.removeSuffix(".ogg")
-            if (key.startsWith("tone_") || key.startsWith("${lang}_")) context.assets.openFd("sounds/$name").use { ids[key] = pool.load(it, 1) }
+            if (key.startsWith("tone_") || key.startsWith("${lang}_")) context.assets.openFd("sounds/$name").use { fd ->
+                ids[key] = pool.load(fd, 1)
+                // navigation is said in pieces ("In 300 Metern" + "rechts abbiegen"): each piece's length chains them
+                if ("_nav_" in key) runCatching {
+                    val r = android.media.MediaMetadataRetriever() // AutoCloseable only from Android 10, so release() by hand
+                    try {
+                        r.setDataSource(fd.fileDescriptor, fd.startOffset, fd.length)
+                        lengths[key] = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)!!.toLong()
+                    } finally { r.release() }
+                }
+            }
         }
         val nm = context.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CHANNEL_ALERTS, tr("Warnungen", "Alerts"), NotificationManager.IMPORTANCE_HIGH).apply {
@@ -66,6 +77,23 @@ class Alerter(private val context: Context) {
             Funk.diag.value = Funk.diag.value.copy(sounds = Funk.diag.value.sounds + 1)
         }
         if (s.vibrate && voice) vibrate(kind)
+    }
+
+    /** Navigation: clip keys (nav_*) one after another, no tone. Waits for an alert that is still talking. */
+    fun say(keys: List<String>) {
+        val s = Funk.settings.value
+        if (!s.sound || !s.voice || keys.isEmpty()) return
+        val now = System.currentTimeMillis()
+        var at = maxOf(0L, busyUntil - now)
+        main.postDelayed({ duck() }, at)
+        for (k in keys) {
+            val key = langKey(k)
+            val id = ids[key] ?: continue
+            main.postDelayed({ pool.play(id, 1f, 1f, 1, 0, 1f) }, at)
+            at += (lengths[key] ?: 1200L) + 80
+        }
+        busyUntil = now + at
+        main.postDelayed({ unduck() }, at + 200)
     }
 
     private fun langKey(kind: String) = (if (isGerman()) "de_" else "en_") + kind

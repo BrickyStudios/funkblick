@@ -24,10 +24,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.brickystudios.funkblick.core.tr
 import io.github.brickystudios.funkblick.scan.Funk
+import io.github.brickystudios.funkblick.scan.Nav
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.semantics.Role
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 
 /**
- * Discreet mode (plan E): an ordinary-looking light map with your position and nothing else. No radar, no device dots,
+ * Discreet mode (plan E): an ordinary-looking light map with your position, a route if you set one, and nothing else. No radar, no device dots,
  * no amber. Alerts keep coming as sound or vibration, notifications say only "Funkblick". Tap three times to leave.
  * Our own map style from OpenStreetMap; it does not copy any other app's look, name or icon.
  */
@@ -35,6 +42,8 @@ import kotlinx.coroutines.delay
 fun DiscreetScreen(onExit: () -> Unit) {
     var taps by remember { mutableStateOf(listOf<Long>()) }
     var hint by remember { mutableStateOf(!Funk.discreetHintSeen()) }
+    var searching by remember { mutableStateOf(false) }
+    val nav by Nav.state.collectAsStateWithLifecycle()
     DisposableEffect(Unit) {
         Funk.discreet.value = true
         onDispose { Funk.discreet.value = false }
@@ -52,11 +61,18 @@ fun DiscreetScreen(onExit: () -> Unit) {
                 if (taps.size >= 3) onExit()
             }
         })
+        NavBanner(light = true, modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(12.dp))
+        // an ordinary nav app has a place to type where to go; ours sits at the bottom, in the app's own shape
+        if (nav == null) Text(tr("Wohin?", "Where to?"), color = Color(0xFF5A5F66), fontSize = 17.sp,
+            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(12.dp).fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp)).background(Color.White).clickable(role = Role.Button) { searching = true }
+                .heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 16.dp))
         if (hint) Text(
             tr("Dreimal schnell tippen zum Beenden", "Tap three times quickly to leave"),
             color = Color(0xFF202124), fontSize = 15.sp,
-            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(24.dp)
+            modifier = Modifier.align(Alignment.Center).padding(24.dp)
                 .clip(RoundedCornerShape(8.dp)).background(Color.White).padding(horizontal = 16.dp, vertical = 12.dp),
         )
+        if (searching) DestinationSearch(light = true) { searching = false }
     }
 }
