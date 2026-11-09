@@ -67,4 +67,11 @@ class LocateTest {
         assertNotNull(pos)
         assertTrue(error(pos!!) < 35)
     }
+
+    @Test fun radarSpotPointsWhereTheRadarDrawsIt() {
+        val (eLat, eLon) = spotAt(apLat, apLon, 100.0, 0.0) // 0° = east
+        assertTrue(eLon > apLon && kotlin.math.abs(eLat - apLat) < 1e-9)
+        assertTrue(kotlin.math.abs(distanceMeters(apLat, apLon, eLat, eLon) - 100) < 1)
+        assertTrue(spotAt(apLat, apLon, 100.0, 90.0).first < apLat) // clockwise on screen: 90° = south
+    }
 }

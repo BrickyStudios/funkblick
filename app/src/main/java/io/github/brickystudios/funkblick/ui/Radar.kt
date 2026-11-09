@@ -52,7 +52,7 @@ import kotlin.math.sin
 private fun radius(rssi: Int) = ((-rssi - 30) / 70f).coerceIn(0.05f, 1f)
 
 /** Phones can't tell direction, so the angle is just a stable spot per device. */
-private fun angle(id: String) = ((id.hashCode().toLong() and 0xFFFFFFFFL) % 360).toFloat()
+fun angle(id: String) = ((id.hashCode().toLong() and 0xFFFFFFFFL) % 360).toFloat()
 
 /** Android's "remove animations": the sweep stands still (plan 6G). */
 @Composable

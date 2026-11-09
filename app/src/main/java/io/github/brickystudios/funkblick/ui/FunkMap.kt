@@ -20,9 +20,11 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.brickystudios.funkblick.core.Category
 import io.github.brickystudios.funkblick.core.Device
+import io.github.brickystudios.funkblick.core.distanceFromRssi
 import io.github.brickystudios.funkblick.core.isFollowingVehicle
 import io.github.brickystudios.funkblick.core.metersToLat
 import io.github.brickystudios.funkblick.core.metersToLon
+import io.github.brickystudios.funkblick.core.spotAt
 import io.github.brickystudios.funkblick.core.tr
 import io.github.brickystudios.funkblick.scan.Fix
 import io.github.brickystudios.funkblick.scan.Funk
@@ -86,11 +88,13 @@ private const val SRC_CAMS = "fb-cams"
 private const val SRC_TRAFFIC = "fb-traffic"
 private const val SRC_NOTABLE = "fb-notable"
 private const val SRC_OTHER = "fb-other"
+private const val SRC_NEAR = "fb-near"
 private const val SRC_ME = "fb-me"
 private const val SRC_RING = "fb-ring"
 private const val SRC_GRID = "fb-grid"
 const val LAYER_NOTABLE = "fb-notable"
 const val LAYER_OTHER = "fb-other"
+const val LAYER_NEAR = "fb-near"
 
 private fun addOverlay(style: Style, light: Boolean) {
     val empty = FeatureCollection.fromFeatures(emptyList())
@@ -102,6 +106,7 @@ private fun addOverlay(style: Style, light: Boolean) {
     style.addSource(GeoJsonSource(SRC_NOTABLE, empty))
     // everything else is bundled into numbers until you zoom into a street (plan 7E)
     style.addSource(GeoJsonSource(SRC_OTHER, empty, GeoJsonOptions().withCluster(true).withClusterRadius(48).withClusterMaxZoom(17)))
+    style.addSource(GeoJsonSource(SRC_NEAR, empty))
     style.addSource(GeoJsonSource(SRC_ME, empty))
     style.addLayer(LineLayer("fb-grid", SRC_GRID).withProperties(P.lineColor("#2A2418"), P.lineWidth(1f)))
     if (light) {
@@ -120,6 +125,9 @@ private fun addOverlay(style: Style, light: Boolean) {
         P.textColor("#F2E8D5"), P.textAllowOverlap(true)).also { it.minZoom = 15f })
     style.addLayer(CircleLayer(LAYER_OTHER, SRC_OTHER).withFilter(Expression.not(Expression.has("point_count"))).withProperties(
         P.circleColor(Expression.toColor(Expression.get("c"))), P.circleRadius(4f), P.circleOpacity(0.85f)).also { it.minZoom = 15f })
+    // "All devices": the ones without a position estimate, around you like on the radar. Hollow, because the direction is made up.
+    style.addLayer(CircleLayer(LAYER_NEAR, SRC_NEAR).withProperties(P.circleColor("#0D0C0A"), P.circleRadius(5f),
+        P.circleStrokeColor(Expression.toColor(Expression.get("c"))), P.circleStrokeWidth(1.5f)))
     style.addLayer(LineLayer("fb-ring", SRC_RING).withProperties(P.lineColor(Expression.toColor(Expression.get("c"))), P.lineWidth(2f), P.lineOpacity(0.8f)))
     style.addLayer(CircleLayer(LAYER_NOTABLE, SRC_NOTABLE).withProperties(
         P.circleColor(Expression.toColor(Expression.get("c"))), P.circleRadius(7f), P.circleStrokeColor("#0D0C0A"), P.circleStrokeWidth(2f)))
@@ -147,16 +155,15 @@ private fun grid(lat: Double, lon: Double): FeatureCollection {
     return FeatureCollection.fromFeatures(lines)
 }
 
-private fun Device.feature(): Feature? {
-    val p = pos ?: return null
-    return Feature.fromGeometry(Point.fromLngLat(p.lon, p.lat)).also {
-        it.addStringProperty("id", id)
-        it.addStringProperty("c", hex(cls.category.color()))
-    }
+private fun Device.feature(lat: Double, lon: Double) = Feature.fromGeometry(Point.fromLngLat(lon, lat)).also {
+    it.addStringProperty("id", id)
+    it.addStringProperty("c", hex(cls.category.color()))
 }
 
+private fun Device.feature(): Feature? = pos?.let { feature(it.lat, it.lon) }
+
 /** Pushes the session onto the map. Cheap enough for once a second. */
-private fun update(style: Style, devices: List<Device>, fix: Fix?, track: List<Fix>, selected: String?, offline: Boolean) {
+private fun update(style: Style, devices: List<Device>, fix: Fix?, track: List<Fix>, selected: String?, offline: Boolean, nearby: Boolean) {
     fun src(id: String) = style.getSourceAs<GeoJsonSource>(id)
     val notable = devices.filter { it.cls.mute == null && (it.cls.watch != null || it.cls.category.ordinal <= Category.FLEET.ordinal) }
     src(SRC_NOTABLE)?.setGeoJson(FeatureCollection.fromFeatures(notable.mapNotNull { it.feature() }))
@@ -176,6 +183,13 @@ private fun update(style: Style, devices: List<Device>, fix: Fix?, track: List<F
         devices.filter { it.isFollowingVehicle() }.forEachIndexed { i, _ -> rings += ring(fix.lat, fix.lon, 40.0 + i * 12, hex(Category.FLEET.color())) }
         if (offline) src(SRC_GRID)?.setGeoJson(grid(fix.lat, fix.lon))
     }
+    // heard in the last minute of the scan (not the clock: the demo and a stopped scan keep their picture)
+    val newest = devices.maxOfOrNull { it.lastSeen } ?: 0L
+    src(SRC_NEAR)?.setGeoJson(FeatureCollection.fromFeatures(if (!nearby || fix == null) emptyList() else devices
+        .filter { it.pos == null && !it.own && it.cls.mute == null && newest - it.lastSeen < 60_000 }
+        .map { d -> spotAt(fix.lat, fix.lon, distanceFromRssi(d.rssi).coerceIn(25.0, 200.0), angle(d.id).toDouble()).let { (la, lo) -> d.feature(la, lo) } }))
+    // with "All devices" the bundled others show before street zoom too
+    for (id in listOf("fb-other-cluster", "fb-other-count", LAYER_OTHER)) style.getLayer(id)?.minZoom = if (nearby) 0f else 15f
     devices.firstOrNull { it.id == selected }?.pos?.let { p -> rings += ring(p.lat, p.lon, p.radiusM, "#F2E8D5") }
     src(SRC_RING)?.setGeoJson(FeatureCollection.fromFeatures(rings))
 }
@@ -188,10 +202,11 @@ fun initMap(context: Context) {
 
 /**
  * follow: camera follows your position (and turns with the driving direction when moving).
+ * nearby: also devices without a position estimate, around you (off in car mode, kept simple).
  * onTap: a device was tapped (its id). onOffline: the online style couldn't load.
  */
 @Composable
-fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow: Boolean = true, selected: String? = null,
+fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow: Boolean = true, selected: String? = null, nearby: Boolean = false,
             onTap: (String) -> Unit = {}, onFollowLost: () -> Unit = {}, onOffline: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -228,7 +243,7 @@ fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow:
             m.uiSettings.isLogoEnabled = false
             m.addOnCameraMoveStartedListener { reason -> if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) lost() }
             m.addOnMapClickListener { ll ->
-                val f = m.queryRenderedFeatures(m.projection.toScreenLocation(ll), LAYER_NOTABLE, LAYER_OTHER).firstOrNull()
+                val f = m.queryRenderedFeatures(m.projection.toScreenLocation(ll), LAYER_NOTABLE, LAYER_NEAR, LAYER_OTHER).firstOrNull()
                 f?.getStringProperty("id")?.let { tap(it); true } ?: false
             }
             view.addOnDidFailLoadingMapListener {
@@ -246,8 +261,8 @@ fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow:
             m.cameraPosition = CameraPosition.Builder().target(LatLng(fix?.lat ?: 51.1657, fix?.lon ?: 10.4515)).zoom(if (fix == null) 5.5 else 15.0).build() // no fix: all of Germany
         }
     }
-    LaunchedEffect(style, devices, fix, track, selected, offline) {
-        style?.let { update(it, devices, fix, track, selected, offline) }
+    LaunchedEffect(style, devices, fix, track, selected, offline, nearby) {
+        style?.let { update(it, devices, fix, track, selected, offline, nearby) }
     }
     LaunchedEffect(map, fix, follow) {
         val m = map ?: return@LaunchedEffect

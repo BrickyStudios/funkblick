@@ -2,6 +2,7 @@ package io.github.brickystudios.funkblick.core
 
 import kotlin.math.cos
 import kotlin.math.pow
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 // Where is a fixed transmitter (router, camera)? A phone can't measure direction, but it can measure signal
@@ -62,3 +63,9 @@ fun MutableList<Reading>.addReading(r: Reading): Boolean {
 /** Metres to degrees around a latitude, for tests and map offsets. */
 fun metersToLat(m: Double) = m / 111_320.0
 fun metersToLon(m: Double, lat: Double) = m / (111_320.0 * cos(Math.toRadians(lat)))
+
+/** The spot [meters] away at a radar angle (0° = east, then clockwise as on screen): devices without an estimate on the map. */
+fun spotAt(lat: Double, lon: Double, meters: Double, radarDeg: Double): Pair<Double, Double> {
+    val a = Math.toRadians(radarDeg)
+    return lat - metersToLat(meters * sin(a)) to lon + metersToLon(meters * cos(a), lat)
+}

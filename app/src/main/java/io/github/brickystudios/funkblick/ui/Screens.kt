@@ -184,6 +184,9 @@ private fun missing(c: Context): Pair<String, Intent>? {
     }
 }
 
+/** Map chip "All devices": also devices without a position, like the radar. Outside the screen so tabs and car mode keep it. */
+private var all by mutableStateOf(false)
+
 @Composable
 fun LiveScreen(running: Boolean, demo: Boolean, onStart: () -> Unit, onStop: () -> Unit, onDemo: () -> Unit,
                onOpen: (Device) -> Unit, onFind: (String) -> Unit, onCar: () -> Unit, onDiscreet: () -> Unit) {
@@ -230,10 +233,11 @@ fun LiveScreen(running: Boolean, demo: Boolean, onStart: () -> Unit, onStop: () 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip("Radar", !showMap) { manual = false }
                 Chip(if (fix == null) tr("Karte, warte auf GPS", "Map, waiting for GPS") else tr("Karte", "Map"), showMap) { if (fix != null) manual = true }
+                if (showMap) Chip(tr("Alle Geräte", "All devices"), all) { all = !all }
             }
         }
         item {
-            if (showMap) FunkMap(Modifier.fillMaxWidth().height(360.dp).clip(RoundedCornerShape(8.dp)), onTap = { id ->
+            if (showMap) FunkMap(Modifier.fillMaxWidth().height(360.dp).clip(RoundedCornerShape(8.dp)), nearby = all, onTap = { id ->
                 devices.firstOrNull { it.id == id }?.let(onOpen)
             }, onFollowLost = {})
             else Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
