@@ -96,6 +96,24 @@ fun NavBanner(light: Boolean, modifier: Modifier = Modifier) {
     }
 }
 
+/** One place in the list: tap to drive there; the small button on the right does [onAction]. */
+@Composable
+private fun PlaceRow(p: Place, c: Look, icon: String?, title: String = p.name, action: String, actionLabel: String, actionOn: Boolean = false,
+                     onAction: () -> Unit, onGo: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        if (icon != null) Text(icon, color = c.accent, fontSize = 24.sp, modifier = Modifier.width(36.dp))
+        Column(Modifier.weight(1f).clickable(role = Role.Button, onClick = onGo).heightIn(min = 56.dp).padding(vertical = 8.dp)) {
+            Text(title, color = c.ink, fontSize = 17.sp)
+            val sub = if (title == p.name) p.detail else listOf(p.name, p.detail).filter { it.isNotEmpty() }.joinToString(", ")
+            if (sub.isNotEmpty()) Text(sub, color = c.dim, fontSize = 14.sp)
+        }
+        Box(Modifier.size(48.dp).clickable(role = Role.Button, onClick = onAction).semantics { contentDescription = actionLabel },
+            contentAlignment = Alignment.Center) {
+            Text(action, color = if (actionOn) c.accent else c.dim, fontSize = 20.sp)
+        }
+    }
+}
+
 /**
  * Where to: a search box, the places Photon finds (near you first), tap one to start. Says plainly who learns what.
  * Honours "Load map data from the network": off means no search and no route either.
@@ -103,6 +121,7 @@ fun NavBanner(light: Boolean, modifier: Modifier = Modifier) {
 @Composable
 fun DestinationSearch(light: Boolean, onClose: () -> Unit) {
     val settings by Funk.settings.collectAsStateWithLifecycle()
+    val home by Funk.navHome.collectAsStateWithLifecycle()
     val c = look(light)
     var q by rememberSaveable { mutableStateOf("") }
     var results by remember { mutableStateOf<List<Place>?>(null) }
@@ -140,11 +159,20 @@ fun DestinationSearch(light: Boolean, onClose: () -> Unit) {
             results?.isEmpty() == true -> Text(tr("Nichts gefunden.", "Nothing found."), color = c.ink, fontSize = 16.sp)
         }
         LazyColumn(Modifier.weight(1f)) {
-            items(results.orEmpty()) { p ->
-                Column(Modifier.fillMaxWidth().clickable(role = Role.Button) { Nav.start(p); onClose() }.heightIn(min = 56.dp).padding(vertical = 8.dp)) {
-                    Text(p.name, color = c.ink, fontSize = 17.sp)
-                    if (p.detail.isNotEmpty()) Text(p.detail, color = c.dim, fontSize = 14.sp)
+            home?.let { h ->
+                item {
+                    PlaceRow(h, c, "⌂", title = tr("Nach Hause", "Home"), action = "✕", actionLabel = tr("Zuhause löschen", "Forget home"),
+                        onAction = { Funk.setNavHome(null) }) { Nav.start(h); onClose() }
                 }
+            }
+            items(results.orEmpty()) { p ->
+                val saved = p == home
+                PlaceRow(p, c, null, action = "⌂", actionLabel = tr("Als Zuhause speichern", "Save as home"), actionOn = saved,
+                    onAction = { Funk.setNavHome(p) }) { Nav.start(p); onClose() }
+            }
+            if (home == null) item {
+                Text(tr("⌂ neben einem Treffer speichert ihn als Zuhause. Er bleibt nur auf diesem Handy.",
+                    "⌂ next to a result saves it as home. It stays on this phone only."), color = c.dim, fontSize = 14.sp, modifier = Modifier.padding(vertical = 8.dp))
             }
         }
         Text(tr("Suche über Photon (komoot), Route über FOSSGIS (OpenStreetMap Deutschland). Beide erfahren Start und Ziel, Funkblick speichert es nicht. Kartendaten © OpenStreetMap.",

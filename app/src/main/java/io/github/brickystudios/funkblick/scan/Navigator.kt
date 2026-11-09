@@ -1,7 +1,9 @@
 package io.github.brickystudios.funkblick.scan
 
 import io.github.brickystudios.funkblick.BuildConfig
+import io.github.brickystudios.funkblick.core.CamAhead
 import io.github.brickystudios.funkblick.core.Guide
+import io.github.brickystudios.funkblick.core.SpeedCam
 import io.github.brickystudios.funkblick.core.Place
 import io.github.brickystudios.funkblick.core.Progress
 import io.github.brickystudios.funkblick.core.Route
@@ -79,6 +81,11 @@ object Nav {
         }
         return take() + p.say
     }
+
+    /** On a route and on it: speed cameras are then looked for along the road instead of in a radius. */
+    fun following(): Boolean = guide != null && state.value?.progress?.offRoute != true
+
+    fun camOnRoute(cams: List<SpeedCam>, maxM: Double): CamAhead? = guide?.camOnRoute(cams, maxM)
 
     private fun take(): List<String> = pending.toList().also { pending.clear() }
 

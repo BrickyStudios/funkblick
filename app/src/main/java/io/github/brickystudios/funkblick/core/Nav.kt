@@ -102,11 +102,14 @@ class Guide(val route: Route) {
     private var near = -1
     private var off = 0
     private var arrived = false
+    /** metres along the route at the last update */
+    var along = 0.0; private set
 
     fun update(lat: Double, lon: Double, speedKmh: Float?): Progress {
         val shape = route.shape
         val (dist, along) = if (shape.size < 2) distanceMeters(lat, lon, shape[0].first, shape[0].second) to 0.0 else snap(lat, lon)
         off = if (dist > OFF_ROUTE_M) off + 1 else 0
+        this.along = along
         val idx = route.maneuvers.indexOfFirst { it.type !in 1..3 && route.cum[it.at.coerceIn(0, shape.lastIndex)] > along + 5 }
         val m = route.maneuvers.getOrNull(idx)
         val toNext = m?.let { route.cum[it.at.coerceIn(0, shape.lastIndex)] - along } ?: 0.0
@@ -129,6 +132,33 @@ class Guide(val route: Route) {
         }
         val share = if (route.meters > 0) left / route.meters else 0.0
         return Progress(m, toNext, left, route.seconds * share, off >= 3, arrived, say)
+    }
+
+    /**
+     * The nearest camera standing at the route ahead (at most [sideM] beside it) within [maxM] of road, with the road
+     * distance. A camera on a parallel street or one you already passed doesn't count, unlike a plain radius.
+     */
+    fun camOnRoute(cams: List<SpeedCam>, maxM: Double, sideM: Double = 25.0): CamAhead? {
+        val shape = route.shape
+        if (shape.size < 2) return null
+        var best: CamAhead? = null
+        for (c in cams) {
+            val kx = 111_320.0 * cos(Math.toRadians(c.lat)); val ky = 111_320.0
+            var i = seg
+            while (i < shape.size - 1 && route.cum[i] <= along + maxM) {
+                val ax = (shape[i].second - c.lon) * kx; val ay = (shape[i].first - c.lat) * ky
+                val dx = (shape[i + 1].second - c.lon) * kx - ax; val dy = (shape[i + 1].first - c.lat) * ky - ay
+                val l2 = dx * dx + dy * dy
+                val t = if (l2 == 0.0) 0.0 else (-(ax * dx + ay * dy) / l2).coerceIn(0.0, 1.0)
+                val ahead = route.cum[i] + t * (route.cum[i + 1] - route.cum[i]) - along
+                if (hypot(ax + t * dx, ay + t * dy) <= sideM && ahead > 0 && ahead <= maxM) {
+                    if (best == null || ahead < best.meters) best = CamAhead(c, ahead.toInt())
+                    break
+                }
+                i++
+            }
+        }
+        return best
     }
 
     /** Distance to the route and metres along it. Searches near the last spot, so a parallel road ahead can't capture you. */

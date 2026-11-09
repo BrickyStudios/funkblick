@@ -66,4 +66,18 @@ class NavTest {
         assertEquals(listOf(false, false, true), flags)
         assertFalse(g.update(a.first + metersToLat(170.0), a.second, 50f).offRoute) // back on the road
     }
+
+    @Test fun warnsOnlyForCamerasAtTheRouteAheadWithRoadDistance() {
+        val g = Guide(route)
+        g.update(a.first + metersToLat(600.0), a.second, 50f) // 600 m up the first road
+        val beside = SpeedCam(a.first + metersToLat(800.0), a.second + metersToLon(60.0, a.first), 50)    // parallel street
+        val behind = SpeedCam(a.first + metersToLat(500.0), a.second, 50)                                 // passed
+        val afterTurn = SpeedCam(b.first, b.second + metersToLon(300.0, b.first), 30)                     // 400 + 300 m of road
+        val hit = g.camOnRoute(listOf(beside, behind, afterTurn), 800.0)
+        assertEquals(afterTurn, hit!!.cam)
+        assertTrue("road ${hit.meters}", abs(hit.meters - 700) < 5) // straight line would be about 500 m
+        assertEquals(null, g.camOnRoute(listOf(beside, behind), 800.0))
+        val onRoad = SpeedCam(a.first + metersToLat(900.0), a.second + metersToLon(8.0, a.first), 50)   // pole next to the road
+        assertEquals(onRoad, g.camOnRoute(listOf(afterTurn, onRoad), 800.0)!!.cam)                        // the nearer one wins
+    }
 }

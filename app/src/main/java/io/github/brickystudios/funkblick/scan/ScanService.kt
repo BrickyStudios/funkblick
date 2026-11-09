@@ -44,6 +44,7 @@ import io.github.brickystudios.funkblick.core.RuleField
 import io.github.brickystudios.funkblick.core.RuleKind
 import io.github.brickystudios.funkblick.core.Sighting
 import io.github.brickystudios.funkblick.core.TRACKER_SERVICE_UUIDS
+import io.github.brickystudios.funkblick.core.WARN_METERS
 import io.github.brickystudios.funkblick.core.hexOf
 import io.github.brickystudios.funkblick.core.kind
 import io.github.brickystudios.funkblick.core.label
@@ -319,8 +320,9 @@ class ScanService : Service() {
         Funk.fix.value = f
         Funk.addToTrack(f)
         Funk.diag.value = Funk.diag.value.let { it.copy(fixes = it.fixes + 1) }
+        val say = Nav.onFix(f) // first: the speed camera check below uses where this fix is on the route
         checkSpeedCam(f)
-        alerter.say(Nav.onFix(f))
+        alerter.say(say)
     }
 
     @SuppressLint("MissingPermission")
@@ -335,7 +337,9 @@ class ScanService : Service() {
     private fun checkSpeedCam(f: Fix) {
         if (!Funk.settings.value.traffic) { Funk.camAhead.value = null; return }
         val moving = (f.speedKmh ?: 0f) > 8f
-        val ahead = Funk.speedCams.ahead(f.lat, f.lon, if (moving) f.bearing?.toDouble() else null)
+        // with a route only cameras at the road ahead count, measured along it; without one, the nearest in front
+        val ahead = if (Nav.following()) Nav.camOnRoute(Funk.speedCams.near(f.lat, f.lon, WARN_METERS + 50.0), WARN_METERS.toDouble())
+        else Funk.speedCams.ahead(f.lat, f.lon, if (moving) f.bearing?.toDouble() else null)
         Funk.camAhead.value = ahead
         if (ahead == null || !moving) return
         val key = "%.5f,%.5f".format(java.util.Locale.ROOT, ahead.cam.lat, ahead.cam.lon)

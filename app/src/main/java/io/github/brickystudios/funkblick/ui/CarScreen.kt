@@ -84,6 +84,7 @@ fun CarScreen(running: Boolean, onStart: () -> Unit, onEnableTraffic: () -> Unit
     var follow by remember { mutableStateOf(true) }
     var searching by remember { mutableStateOf(false) }
     val nav by Nav.state.collectAsStateWithLifecycle()
+    val home by Funk.navHome.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val now = rememberNow()
     DisposableEffect(Unit) {
@@ -149,7 +150,10 @@ fun CarScreen(running: Boolean, onStart: () -> Unit, onEnableTraffic: () -> Unit
             }
             if (!running) BigButton(tr("Scan starten", "Start scan"), filled = true, height = 64, onClick = onStart)
             if (!settings.traffic) BigButton(tr("Verkehrs-Hinweise einschalten", "Turn on traffic alerts"), filled = false, color = C.red, height = 64, onClick = onEnableTraffic)
-            if (nav == null) BigButton(tr("Ziel eingeben", "Set destination"), filled = false, height = 64) { searching = true }
+            if (nav == null) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                BigButton(tr("Ziel eingeben", "Set destination"), filled = false, height = 64, modifier = Modifier.weight(1f)) { searching = true }
+                home?.let { h -> BigButton(tr("Nach Hause", "Home"), filled = false, height = 64, modifier = Modifier.weight(1f)) { Nav.start(h) } }
+            }
             else BigButton(tr("Navigation beenden", "End navigation"), filled = false, color = C.text, height = 64) { Nav.stop() }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BigButton("Blitzer.de", filled = false, color = C.dim, height = 64, modifier = Modifier.weight(1f)) { openBlitzerDe(context) }

@@ -107,6 +107,14 @@ object Funk {
 
     fun discreetHintSeen() = prefs().getBoolean("discreetHint", false)
     fun markDiscreetHintSeen() = prefs().edit().putBoolean("discreetHint", true).apply()
+
+    /** "Home" for navigation: an address with coordinates, unlike the home watch. Only in the app's own storage
+     * (no backup, allowBackup=false), never in a log or export. */
+    val navHome = MutableStateFlow<io.github.brickystudios.funkblick.core.Place?>(null)
+    fun setNavHome(p: io.github.brickystudios.funkblick.core.Place?) {
+        navHome.value = p
+        prefs().edit().apply { if (p == null) remove("navHome") else putString("navHome", gson.toJson(p)) }.apply()
+    }
     val demo = MutableStateFlow(false)
     val diag = MutableStateFlow(Diag())
     val fix = MutableStateFlow<Fix?>(null)
@@ -132,6 +140,7 @@ object Funk {
         prefs.getString("settings", null)?.let { s -> runCatching { gson.fromJson(s, Settings::class.java) }.getOrNull()?.let { _settings.value = it } }
         // the place is a handful of Wi-Fi ids, no coordinates; it stays in the app's own storage and never goes into a log
         prefs.getString("home", null)?.let { s -> runCatching { gson.fromJson(s, HomeWatch::class.java) }.getOrNull()?.let { session.home = it; savedHome = it } }
+        prefs.getString("navHome", null)?.let { s -> navHome.value = runCatching { gson.fromJson(s, io.github.brickystudios.funkblick.core.Place::class.java) }.getOrNull() }
         prefs.getString("rules", null)?.let { s ->
             runCatching { gson.fromJson<List<Rule>>(s, object : TypeToken<List<Rule>>() {}.type) }.getOrNull()?.let { _rules.value = it }
         }
