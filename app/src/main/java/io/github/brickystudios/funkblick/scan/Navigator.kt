@@ -43,6 +43,8 @@ object Nav {
     private var arrivedAt = 0L
     private var refused = false // the server said this destination can't be reached by car: asking again won't change that
     private val pending = mutableListOf<String>() // said with the next fix: the scan service owns the speaker
+    /** The drive (Diag.serviceSince) in which someone said "I'm the passenger" to type a destination while moving. */
+    var passengerDrive = -1L
 
     /** null: no connection, or "Load map data from the network" is off. */
     suspend fun search(q: String, near: Fix?): List<Place>? = withContext(Dispatchers.IO) {

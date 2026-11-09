@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -125,7 +126,13 @@ private fun PlaceRow(p: Place, c: Look, icon: String?, title: String = p.name, a
 fun DestinationSearch(light: Boolean, onClose: () -> Unit) {
     val settings by Funk.settings.collectAsStateWithLifecycle()
     val home by Funk.navHome.collectAsStateWithLifecycle()
+    val fix by Funk.fix.collectAsStateWithLifecycle()
+    val diag by Funk.diag.collectAsStateWithLifecycle()
     val c = look(light)
+    // § 23 Abs. 1a StVO: a driver may only glance at the phone. While moving, typing needs a passenger, asked once per drive
+    var driver by remember { mutableStateOf(false) }
+    var passenger by remember { mutableStateOf(Nav.passengerDrive == diag.serviceSince) }
+    val locked = (fix?.speedKmh ?: 0f) > 8f && !passenger
     var q by rememberSaveable { mutableStateOf("") }
     var results by remember { mutableStateOf<List<Place>?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -133,7 +140,16 @@ fun DestinationSearch(light: Boolean, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     val focus = remember { FocusRequester() }
     BackHandler(onBack = onClose)
-    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    LaunchedEffect(locked) { if (!locked) runCatching { focus.requestFocus() } }
+    if (locked && !driver) AlertDialog(
+        onDismissRequest = { driver = true },
+        containerColor = c.card,
+        title = { Text(tr("Bist du Beifahrer?", "Are you the passenger?"), color = c.ink) },
+        text = { Text(tr("Fahrer dürfen das Handy während der Fahrt nur kurz ansehen (§ 23 Abs. 1a StVO). Ein Ziel eintippen dauert länger. Halte an oder gib das Handy deinem Beifahrer.",
+            "Drivers may only glance at the phone while driving (StVO § 23 (1a)). Typing a destination takes longer than that. Stop first or hand the phone to your passenger."), color = c.ink, fontSize = 15.sp) },
+        confirmButton = { TextButton({ Nav.passengerDrive = diag.serviceSince; passenger = true }) { Text(tr("Ja, ich bin Beifahrer", "Yes, I'm the passenger"), color = c.accent) } },
+        dismissButton = { TextButton({ driver = true }) { Text(tr("Ich fahre", "I'm driving"), color = c.dim) } },
+    )
     fun go() {
         if (q.isBlank() || busy) return
         busy = true
@@ -144,8 +160,8 @@ fun DestinationSearch(light: Boolean, onClose: () -> Unit) {
     }
     Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().imePadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(q, { q = it }, Modifier.weight(1f).focusRequester(focus), singleLine = true, enabled = settings.mapData,
-                placeholder = { Text(tr("Wohin?", "Where to?"), color = c.dim) },
+            OutlinedTextField(q, { q = it }, Modifier.weight(1f).focusRequester(focus), singleLine = true, enabled = settings.mapData && !locked,
+                placeholder = { Text(if (locked) tr("Im Stand eingeben", "Enter when stopped") else tr("Wohin?", "Where to?"), color = c.dim) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { go() }),
                 colors = OutlinedTextFieldDefaults.colors(focusedTextColor = c.ink, unfocusedTextColor = c.ink, cursorColor = c.accent,
                     focusedBorderColor = c.accent, unfocusedBorderColor = c.dim))
@@ -157,6 +173,7 @@ fun DestinationSearch(light: Boolean, onClose: () -> Unit) {
             return@Column
         }
         when {
+            locked -> Text(tr("Ziel im Stand eingeben. „Nach Hause“ geht mit einem Tipp.", "Enter the destination once you've stopped. \"Home\" takes one tap."), color = c.ink, fontSize = 16.sp)
             busy -> Text(tr("Suche …", "Searching …"), color = c.dim, fontSize = 16.sp)
             failed -> Text(tr("Keine Verbindung.", "No connection."), color = c.ink, fontSize = 16.sp)
             results?.isEmpty() == true -> Text(tr("Nichts gefunden.", "Nothing found."), color = c.ink, fontSize = 16.sp)
