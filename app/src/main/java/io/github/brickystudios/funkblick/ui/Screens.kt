@@ -150,7 +150,7 @@ fun Device.whyLine(): String {
 
 /** A device as a calm row: dot, name, why it matters, signal on the right (plan 4A). */
 @Composable
-fun DeviceRow(d: Device, m: Masker, now: Long, onClick: () -> Unit) {
+fun DeviceRow(d: Device, m: Masker, now: Long, time: String? = null, onClick: () -> Unit) {
     val col = if (d.police != null) C.blue else d.cls.category.color()
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(if (d.alerting()) col.copy(alpha = 0.10f) else Color.Transparent)
@@ -167,7 +167,7 @@ fun DeviceRow(d: Device, m: Masker, now: Long, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column(horizontalAlignment = Alignment.End) {
             Text("${d.rssi} dBm", style = data)
-            Text(ago(d.lastSeen, now), style = data.copy(fontSize = 13.sp, color = C.dim))
+            Text(time ?: ago(d.lastSeen, now), style = data.copy(fontSize = 13.sp, color = C.dim))
         }
     }
 }
@@ -282,7 +282,7 @@ fun LiveScreen(running: Boolean, demo: Boolean, onStart: () -> Unit, onStop: () 
 /** The last session once the scan stopped (plan 2G, F1, F4): numbers, makers and every alert in order. The route is on the map above. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Recap(devices: List<Device>, alerts: List<LoggedAlert>, track: List<TrackPoint>) {
+fun Recap(devices: List<Device>, alerts: List<LoggedAlert>, track: List<TrackPoint>, title: String? = null) {
     val s = remember(devices, track) { tripStats(devices, track) } ?: return
     val drive = s.km >= 1
     val clock = remember { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT) }
@@ -293,7 +293,7 @@ private fun Recap(devices: List<Device>, alerts: List<LoggedAlert>, track: List<
     }
     Panel {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(if (drive) tr("Letzte Fahrt", "Last drive") else tr("Letzte Sitzung", "Last session"), color = C.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(title ?: if (drive) tr("Letzte Fahrt", "Last drive") else tr("Letzte Sitzung", "Last session"), color = C.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Num(tr("Dauer", "Time"), duration(s.millis))
                 if (drive) Num(tr("Strecke", "Distance"), "%.1f km".format(s.km))
@@ -311,7 +311,7 @@ private fun Recap(devices: List<Device>, alerts: List<LoggedAlert>, track: List<
             )
             if (alerts.isNotEmpty()) {
                 Text(tr("Warnungen der Reihe nach", "Alerts in order"), style = label)
-                for (a in alerts.sortedBy { it.time }.takeLast(30)) Row(verticalAlignment = Alignment.CenterVertically) {
+                for (a in alerts.sortedBy { it.time }.takeLast(if (title != null) 200 else 30)) Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(clock.format(java.util.Date(a.time)), style = data.copy(fontSize = 13.sp, color = C.dim), modifier = Modifier.width(56.dp))
                     Dot(kindColor(a.kind), 8)
                     Spacer(Modifier.width(8.dp))
@@ -371,7 +371,7 @@ fun ListScreen(onOpen: (Device) -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun DeviceSheet(d: Device, onFind: () -> Unit, onDismiss: () -> Unit) {
+fun DeviceSheet(d: Device, onFind: () -> Unit, past: Boolean = false, onDismiss: () -> Unit) {
     val settings by Funk.settings.collectAsStateWithLifecycle()
     val rules by Funk.rules.collectAsStateWithLifecycle()
     val m = remember(settings.safeScreen) { Funk.screenMasker() }
@@ -389,9 +389,10 @@ fun DeviceSheet(d: Device, onFind: () -> Unit, onDismiss: () -> Unit) {
             Text(m.name(d) ?: d.cls.tracker?.kind?.label ?: tr("Ohne Namen", "No name"), color = C.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
             Text(d.whyLine(), color = C.dim, fontSize = 15.sp)
             d.police?.let { Text(it.why, color = C.blue, fontSize = 15.sp, lineHeight = 21.sp) }
-            Funk.seenBefore(d).takeIf { it.isNotEmpty() }?.let { Text(tr("Schon gesehen: ", "Seen before: ") + it.take(3).joinToString(" · ") { t -> sessionLabel(t) }, color = C.amber, fontSize = 15.sp) }
+            if (!past) Funk.seenBefore(d).takeIf { it.isNotEmpty() }?.let { Text(tr("Schon gesehen: ", "Seen before: ") + it.take(3).joinToString(" · ") { t -> sessionLabel(t) }, color = C.amber, fontSize = 15.sp) }
             Gap(12)
-            BigButton(tr("Peilen: hingehen und finden", "Find it: walk towards it"), filled = true, onClick = onFind)
+            // an old log: the device is long gone, and its address may be shortened (safe mode), so no finding and no rules
+            if (!past) BigButton(tr("Peilen: hingehen und finden", "Find it: walk towards it"), filled = true, onClick = onFind)
             Header(tr("Daten", "Details"))
             val rows = listOf(
                 tr("Funk", "Radio") to if (d.radio == Radio.WIFI) tr("WLAN-Zugangspunkt", "Wi-Fi access point") else "Bluetooth LE",
@@ -400,8 +401,8 @@ fun DeviceSheet(d: Device, onFind: () -> Unit, onDismiss: () -> Unit) {
                 tr("Signal", "Signal") to "${d.rssi} dBm, max ${d.rssiMax}",
                 tr("Kanal", "Channel") to (d.freqMhz.takeIf { it > 0 }?.let { "${channelOf(it)} (${bandOf(it)?.label ?: ""}, $it MHz)" } ?: "–"),
                 tr("Sicherheit", "Security") to (d.security?.name ?: "–"),
-                tr("Zuerst", "First seen") to ago(d.firstSeen),
-                tr("Zuletzt", "Last seen") to ago(d.lastSeen),
+                tr("Zuerst", "First seen") to if (past) sessionLabel(d.firstSeen) else ago(d.firstSeen),
+                tr("Zuletzt", "Last seen") to if (past) sessionLabel(d.lastSeen) else ago(d.lastSeen),
                 tr("Gesehen", "Seen") to "${d.seenCount}×" + if (d.places > 0) tr(", an ${d.places} Orten", ", at ${d.places} places") else "",
                 tr("Position", "Position") to (d.pos?.let { tr("geschätzt, ±${it.radiusM.toInt()} m aus ${it.points} Messungen", "estimated, ±${it.radiusM.toInt()} m from ${it.points} readings") }
                     ?: tr("noch zu wenig Messpunkte", "not enough readings yet")),
@@ -422,8 +423,8 @@ fun DeviceSheet(d: Device, onFind: () -> Unit, onDismiss: () -> Unit) {
             if (d.cls.category == Category.PRIORITY || d.cls.category == Category.FLEET || d.cls.category == Category.CAR)
                 Text(tr("Ein Hersteller-Treffer sagt, wer die Hardware gebaut hat, nicht wer sie betreibt.",
                     "A maker match says who built the hardware, not who operates it."), color = C.dim, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
-            Header(tr("Regeln", "Rules"))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (!past) Header(tr("Regeln", "Rules"))
+            if (!past) FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Chip(tr("Gerät beobachten", "Watch device"), false) { add(RuleKind.WATCH, RuleField.ADDRESS, d.address) }
                 Chip(tr("Gerät stumm", "Mute device"), false, C.dim) { add(RuleKind.MUTE, RuleField.ADDRESS, d.address) }
                 if (!d.cls.randomAddress && hex.length == 12) Chip(tr("Hersteller beobachten", "Watch maker"), false) { add(RuleKind.WATCH, RuleField.PREFIX, hex.take(6)) }

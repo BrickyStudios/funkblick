@@ -72,7 +72,7 @@ private fun stamp() = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.ROOT).format(D
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetup: () -> Unit, setupMissing: Int, onChannels: () -> Unit) {
+fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetup: () -> Unit, setupMissing: Int, onChannels: () -> Unit, onOpenLog: (File) -> Unit) {
     val context = LocalContext.current
     val s by Funk.settings.collectAsStateWithLifecycle()
     val rules by Funk.rules.collectAsStateWithLifecycle()
@@ -207,12 +207,12 @@ fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetu
         }
         if (logs.isEmpty()) Text(tr("Noch keine Logs. Sie entstehen beim Scannen, jede Minute und beim Stoppen.", "No logs yet. They are written while scanning, every minute and on stop."), color = C.dim, fontSize = 13.sp)
         for (f in logs.take(30)) Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).clickable(role = Role.Button) { onOpenLog(f) }.heightIn(min = 52.dp), verticalArrangement = Arrangement.Center) {
                 Text(f.nameWithoutExtension.removePrefix("funkblick-").replace('_', ' '), style = data.copy(fontSize = 14.sp))
-                Text("${f.length() / 1024} KB", color = C.dim, fontSize = 13.sp)
+                Text(tr("${f.length() / 1024} KB · Antippen: Karte und Rückblick", "${f.length() / 1024} KB · Tap: map and review"), color = C.dim, fontSize = 13.sp)
             }
             TextButton({ shareFile(context, f, "application/json") }) { Text(tr("Teilen", "Share"), color = C.amber) }
-            TextButton({ f.delete(); logsVersion++ }) { Text(tr("Löschen", "Delete"), color = C.red) }
+            TextButton({ Funk.deleteLog(f); logsVersion++ }) { Text(tr("Löschen", "Delete"), color = C.red) }
         }
 
         Header(tr("Tracker gefunden?", "Found a tracker?"))

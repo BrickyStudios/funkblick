@@ -100,7 +100,7 @@ fun toJson(devices: Collection<Device>, meta: ExportMeta, m: Masker, alerts: Lis
         append("\"tracker\": ${jsonStr(d.cls.tracker?.kind?.label)}, \"separated\": ${d.cls.tracker?.separated}, ")
         append("\"watch\": ${d.cls.watch != null}, \"mute\": ${d.cls.mute != null}, \"rssi_last\": ${d.rssi}, \"rssi_max\": ${d.rssiMax}, ")
         append("\"freq_mhz\": ${d.freqMhz.takeIf { it > 0 }}, \"channel\": ${channelOf(d.freqMhz)}, \"security\": ${jsonStr(d.security?.name)}, ")
-        append("\"first_seen\": ${jsonStr(iso(d.firstSeen))}, \"last_seen\": ${jsonStr(iso(d.lastSeen))}, \"seen_count\": ${d.seenCount}, \"places\": ${d.places}, \"own\": ${d.own}, \"police\": ${jsonStr(d.police?.level?.name)}, ")
+        append("\"first_seen\": ${jsonStr(iso(d.firstSeen))}, \"last_seen\": ${jsonStr(iso(d.lastSeen))}, \"seen_count\": ${d.seenCount}, \"places\": ${d.places}, \"own\": ${d.own}, \"police\": ${jsonStr(d.police?.level?.name)}, \"police_why\": ${jsonStr(d.police?.why)}, ")
         append("\"evidence\": [${d.cls.evidence.joinToString(", ") { "{\"source\": ${jsonStr(it.source.name)}, \"confidence\": ${jsonStr(it.confidence.name)}, \"text\": ${jsonStr(it.text)}}" }}]}")
     }
     append("\n  ],\n  \"alerts\": [")

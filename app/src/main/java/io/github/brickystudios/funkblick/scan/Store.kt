@@ -30,6 +30,10 @@ import io.github.brickystudios.funkblick.core.demoSightings
 import io.github.brickystudios.funkblick.core.kind
 import io.github.brickystudios.funkblick.core.label
 import io.github.brickystudios.funkblick.core.toJson
+import io.github.brickystudios.funkblick.core.PastSession
+import io.github.brickystudios.funkblick.core.TrackPoint
+import io.github.brickystudios.funkblick.core.readLog
+import io.github.brickystudios.funkblick.core.routeJson
 import io.github.brickystudios.funkblick.core.overpassQuery
 import io.github.brickystudios.funkblick.core.overpassToTsv
 import io.github.brickystudios.funkblick.core.tr
@@ -341,8 +345,25 @@ object Funk {
         if (!_settings.value.log || demo.value || session.devices.isEmpty()) return
         val f = logFile ?: File(logDir(), "funkblick-" + SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.ROOT).format(Date(session.startedAt)) + ".json").also { logFile = it }
         val tmp = File(f.path + ".tmp")
-        tmp.writeText(toJson(session.devices.values, meta(), masker(), _alerts.value.reversed()))
+        val m = masker()
+        val alerts = _alerts.value.reversed()
+        tmp.writeText(toJson(session.devices.values, meta(), m, alerts))
         tmp.renameTo(f) // never leave a half-written log behind
+        val r = routeOf(f)
+        val rtmp = File(r.path + ".tmp")
+        rtmp.writeText(routeJson(session.devices.values, track.value.map { TrackPoint(it.lat, it.lon, it.time) }, m, alerts))
+        rtmp.renameTo(r)
+    }
+
+    /** The route and device positions of a log: private, never shared or copied to Downloads (core/Replay.kt). */
+    private fun routeOf(log: File) = File(File(app.filesDir, "routes").apply { mkdirs() }, log.name)
+
+    /** Reads a saved log back for the map. Slow for big logs (1 MB): call it off the main thread. */
+    fun openLog(log: File): PastSession = readLog(log.readText(), routeOf(log).takeIf { it.exists() }?.readText())
+
+    fun deleteLog(log: File) {
+        log.delete()
+        routeOf(log).delete()
     }
 
     /** Copies every log to Download/Funkblick, where a USB cable or the Files app reaches them. Returns how many. */

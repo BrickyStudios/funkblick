@@ -1,6 +1,14 @@
 package io.github.brickystudios.funkblick.ui
 
 import android.content.Context
+import android.graphics.RectF
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -9,7 +17,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -20,6 +32,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.brickystudios.funkblick.core.Category
 import io.github.brickystudios.funkblick.core.Device
+import io.github.brickystudios.funkblick.core.PastSession
+import io.github.brickystudios.funkblick.core.label
 import io.github.brickystudios.funkblick.core.distanceFromRssi
 import io.github.brickystudios.funkblick.core.isFollowingVehicle
 import io.github.brickystudios.funkblick.core.metersToLat
@@ -33,6 +47,7 @@ import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
@@ -96,11 +111,14 @@ private const val SRC_ME = "fb-me"
 private const val SRC_RING = "fb-ring"
 private const val SRC_GRID = "fb-grid"
 private const val SRC_ROUTE = "fb-route"
+private const val SRC_ALERTS = "fb-alerts" // an old log: where each alert went off
 const val LAYER_NOTABLE = "fb-notable"
 const val LAYER_OTHER = "fb-other"
 private const val LAYER_OTHER_CLUSTER = "fb-other-cluster"
 private const val LAYER_OTHER_COUNT = "fb-other-count"
 const val LAYER_NEAR = "fb-near"
+// tapping one of these shows its "t" text: what the dot is
+private val INFO_LAYERS = arrayOf("fb-alerts", "fb-cams", "fb-traffic", "fb-known")
 
 private fun addOverlay(style: Style, light: Boolean) {
     val empty = FeatureCollection.fromFeatures(emptyList())
@@ -115,6 +133,7 @@ private fun addOverlay(style: Style, light: Boolean) {
     // everything else is bundled into numbers until you zoom into a street (plan 7E)
     style.addSource(GeoJsonSource(SRC_OTHER, empty, GeoJsonOptions().withCluster(true).withClusterRadius(48).withClusterMaxZoom(17)))
     style.addSource(GeoJsonSource(SRC_NEAR, empty))
+    style.addSource(GeoJsonSource(SRC_ALERTS, empty))
     style.addSource(GeoJsonSource(SRC_ME, empty))
     style.addLayer(LineLayer("fb-grid", SRC_GRID).withProperties(P.lineColor("#2A2418"), P.lineWidth(1f)))
     // the route to drive: cream on the night map, the usual blue on the light one
@@ -145,6 +164,9 @@ private fun addOverlay(style: Style, light: Boolean) {
     style.addLayer(LineLayer("fb-ring", SRC_RING).withProperties(P.lineColor(Expression.toColor(Expression.get("c"))), P.lineWidth(2f), P.lineOpacity(0.8f)))
     style.addLayer(CircleLayer(LAYER_NOTABLE, SRC_NOTABLE).withProperties(
         P.circleColor(Expression.toColor(Expression.get("c"))), P.circleRadius(7f), P.circleStrokeColor("#0D0C0A"), P.circleStrokeWidth(2f)))
+    // alerts of an old log: cream ring so they don't read as devices
+    style.addLayer(CircleLayer("fb-alerts", SRC_ALERTS).withProperties(
+        P.circleColor(Expression.toColor(Expression.get("c"))), P.circleRadius(8f), P.circleStrokeColor("#F2E8D5"), P.circleStrokeWidth(2f)))
     style.addLayer(CircleLayer("fb-me", SRC_ME).withProperties(P.circleColor("#FFB020"), P.circleRadius(8f), P.circleStrokeColor("#0D0C0A"), P.circleStrokeWidth(3f)))
 }
 
@@ -186,12 +208,17 @@ private fun update(style: Style, devices: List<Device>, fix: Fix?, track: List<F
         Feature.fromGeometry(LineString.fromLngLats(track.map { Point.fromLngLat(it.lon, it.lat) })))))
     val rings = mutableListOf<Feature>()
     if (fix != null) {
-        src(SRC_ME)?.setGeoJson(Feature.fromGeometry(Point.fromLngLat(fix.lon, fix.lat)))
+        src(SRC_ME)?.setGeoJson(Feature.fromGeometry(Point.fromLngLat(fix.lon, fix.lat)).also { it.addStringProperty("t", tr("Du bist hier", "You are here")) })
         // speed cameras belong to the traffic alerts and their opt-in (StVO § 23 Abs. 1c), like the warning itself
         src(SRC_CAMS)?.setGeoJson(FeatureCollection.fromFeatures(if (!Funk.settings.value.traffic) emptyList() else Funk.speedCams.near(fix.lat, fix.lon, 5_000.0)
-            .map { Feature.fromGeometry(Point.fromLngLat(it.lon, it.lat)) }))
+            .map { c -> Feature.fromGeometry(Point.fromLngLat(c.lon, c.lat)).also { it.addStringProperty("t", tr("Blitzer", "Speed camera") + (c.maxspeed?.let { v -> ", $v km/h" } ?: "") + " · OpenStreetMap") } }))
         src(SRC_TRAFFIC)?.setGeoJson(FeatureCollection.fromFeatures(Funk.trafficCams.near(fix.lat, fix.lon, 5_000.0).map {
-            Feature.fromGeometry(Point.fromLngLat(it.lon, it.lat)).apply { addStringProperty("c", hex(trafficColor(it.kind))) }
+            Feature.fromGeometry(Point.fromLngLat(it.lon, it.lat)).apply {
+                addStringProperty("c", hex(trafficColor(it.kind)))
+                addStringProperty("t", when (it.kind) {
+                    "alpr" -> tr("Kennzeichen-Scanner", "Plate reader"); "sensor" -> tr("Zählstelle", "Traffic counter"); else -> tr("Verkehrskamera", "Traffic camera")
+                } + " · OpenStreetMap")
+            }
         }))
         // vehicles that come along have no fixed spot: a ring around you, one per follower, slightly larger each
         devices.filter { it.isFollowingVehicle() }.forEachIndexed { i, _ -> rings += ring(fix.lat, fix.lon, 40.0 + i * 12, hex(Category.FLEET.color())) }
@@ -219,12 +246,19 @@ fun initMap(context: Context) {
  */
 @Composable
 fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow: Boolean = true, selected: String? = null, nearby: Boolean = false,
-            onTap: (String) -> Unit = {}, onFollowLost: () -> Unit = {}, onOffline: (Boolean) -> Unit = {}) {
+            past: PastSession? = null, onTap: ((String) -> Unit)? = null, onFollowLost: () -> Unit = {}, onOffline: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val devices by Funk.devices.collectAsStateWithLifecycle()
-    val fix by Funk.fix.collectAsStateWithLifecycle()
-    val track by Funk.track.collectAsStateWithLifecycle()
+    val liveDevices by Funk.devices.collectAsStateWithLifecycle()
+    val liveFix by Funk.fix.collectAsStateWithLifecycle()
+    val liveTrack by Funk.track.collectAsStateWithLifecycle()
+    // an old log replaces the live session: its devices and route, no position of yours, no cameras around it
+    val pastTrack = remember(past) { past?.track?.map { Fix(it.lat, it.lon, null, null, it.time) } }
+    val devices = past?.devices ?: liveDevices
+    val fix = if (past != null) null else liveFix
+    val track = pastTrack ?: liveTrack
+    var info by remember { mutableStateOf<String?>(null) }
+    val shown by rememberUpdatedState(devices)
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var style by remember { mutableStateOf<Style?>(null) }
     var offline by remember { mutableStateOf(false) }
@@ -259,8 +293,28 @@ fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow:
             m.uiSettings.isLogoEnabled = false
             m.addOnCameraMoveStartedListener { reason -> if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) lost() }
             m.addOnMapClickListener { ll ->
-                val f = m.queryRenderedFeatures(m.projection.toScreenLocation(ll), LAYER_NOTABLE, LAYER_NEAR, LAYER_OTHER).firstOrNull()
-                f?.getStringProperty("id")?.let { tap(it); true } ?: false
+                val p = m.projection.toScreenLocation(ll)
+                val r = 16 * context.resources.displayMetrics.density // a finger, not a pixel: the dots are 4 to 8 px
+                val box = RectF(p.x - r, p.y - r, p.x + r, p.y + r)
+                // your own dot sits on top of everything near you: only when nothing else is under the finger
+                val f = m.queryRenderedFeatures(box, LAYER_NOTABLE, LAYER_NEAR, LAYER_OTHER, LAYER_OTHER_CLUSTER, *INFO_LAYERS).firstOrNull()
+                    ?: m.queryRenderedFeatures(box, "fb-me").firstOrNull()
+                info = null
+                val id = f?.getStringProperty("id")
+                when {
+                    f == null || look == MapLook.LIGHT -> false // discreet mode stays an ordinary map
+                    f.hasProperty("point_count") -> (f.geometry() as? Point)?.let { pt ->
+                        m.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(pt.latitude(), pt.longitude()), m.cameraPosition.zoom + 2), 400); true
+                    } ?: false
+                    id != null -> {
+                        val t = tap
+                        if (t != null) t(id) else info = shown.firstOrNull { it.id == id }?.let { d ->
+                            d.cls.category.label() + ": " + (Funk.screenMasker().name(d) ?: d.cls.tracker?.kind?.label ?: d.cls.vendor ?: tr("ohne Namen", "no name"))
+                        }
+                        true
+                    }
+                    else -> { info = f.getStringProperty("t"); info != null }
+                }
             }
             view.addOnDidFailLoadingMapListener {
                 offline = true
@@ -277,7 +331,7 @@ fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow:
             m.cameraPosition = CameraPosition.Builder().target(LatLng(fix?.lat ?: 51.1657, fix?.lon ?: 10.4515)).zoom(if (fix == null) 5.5 else 15.0).build() // no fix: all of Germany
         }
     }
-    val route = Nav.state.collectAsStateWithLifecycle().value?.route
+    val route = Nav.state.collectAsStateWithLifecycle().value?.route?.takeIf { past == null }
     LaunchedEffect(style, route) { // apart from the per-second update: a long route is thousands of points
         style?.getSourceAs<GeoJsonSource>(SRC_ROUTE)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(route?.let { r ->
             Feature.fromGeometry(LineString.fromLngLats(r.shape.map { (la, lo) -> Point.fromLngLat(lo, la) }))
@@ -285,9 +339,31 @@ fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow:
     }
     val known by Funk.knownCams.collectAsStateWithLifecycle()
     // where earlier drives went: not in the demo and not with "Mask the screen", both are for screenshots
-    val hideKnown = Funk.settings.collectAsStateWithLifecycle().value.safeScreen || Funk.demo.collectAsStateWithLifecycle().value
+    val hideKnown = Funk.settings.collectAsStateWithLifecycle().value.safeScreen || Funk.demo.collectAsStateWithLifecycle().value || past != null
     LaunchedEffect(style, known, hideKnown) { // changes once a minute at most, not with every scan
-        style?.getSourceAs<GeoJsonSource>(SRC_KNOWN)?.setGeoJson(FeatureCollection.fromFeatures(if (hideKnown) emptyList() else known.map { Feature.fromGeometry(Point.fromLngLat(it.lon, it.lat)) }))
+        style?.getSourceAs<GeoJsonSource>(SRC_KNOWN)?.setGeoJson(FeatureCollection.fromFeatures(if (hideKnown) emptyList() else known.map { k ->
+            Feature.fromGeometry(Point.fromLngLat(k.lon, k.lat)).also { it.addStringProperty("t", tr("Kamera aus früherer Fahrt", "Camera from an earlier drive") +
+                (k.label.takeIf(String::isNotBlank)?.let { l -> ": $l" } ?: "") + " · " + sessionLabel(k.lastSeen)) }
+        }))
+    }
+    LaunchedEffect(style, past) {
+        val s = style ?: return@LaunchedEffect
+        val clock = java.text.SimpleDateFormat("HH:mm", java.util.Locale.ROOT)
+        s.getSourceAs<GeoJsonSource>(SRC_ALERTS)?.setGeoJson(FeatureCollection.fromFeatures(past?.alerts.orEmpty().mapNotNull { a ->
+            if (a.lat == null || a.lon == null) null else Feature.fromGeometry(Point.fromLngLat(a.lon, a.lat)).also {
+                it.addStringProperty("c", hex(kindColor(a.kind)))
+                it.addStringProperty("t", clock.format(java.util.Date(a.time)) + " · " + a.text)
+            }
+        }))
+        // the whole drive in view: route, devices and alerts
+        val pts = (past ?: return@LaunchedEffect).track.map { LatLng(it.lat, it.lon) } + past.devices.mapNotNull { d -> d.pos?.let { LatLng(it.lat, it.lon) } } +
+            past.alerts.mapNotNull { a -> if (a.lat != null && a.lon != null) LatLng(a.lat, a.lon) else null }
+        val m = map ?: return@LaunchedEffect
+        when {
+            pts.isEmpty() -> {}
+            pts.distinct().size == 1 -> m.moveCamera(CameraUpdateFactory.newLatLngZoom(pts[0], 15.0))
+            else -> m.moveCamera(CameraUpdateFactory.newLatLngBounds(LatLngBounds.Builder().includes(pts).build(), (32 * context.resources.displayMetrics.density).toInt()))
+        }
     }
     LaunchedEffect(style, nearby) { // with "All devices" the bundled others show before street zoom too
         style?.let { s -> for (id in listOf(LAYER_OTHER_CLUSTER, LAYER_OTHER_COUNT, LAYER_OTHER)) s.getLayer(id)?.minZoom = if (nearby) 0f else 15f }
@@ -305,9 +381,16 @@ fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow:
             .bearing(if (moving) (f.bearing ?: 0f).toDouble() else m.cameraPosition.bearing).build()), 900)
     }
     val notableCount = devices.count { it.cls.category.ordinal <= Category.FLEET.ordinal }
-    AndroidView({ view }, modifier.semantics {
-        contentDescription = tr("Karte, $notableCount auffällige Geräte", "Map, $notableCount notable devices")
-    })
+    Box(modifier) {
+        AndroidView({ view }, Modifier.matchParentSize().semantics {
+            contentDescription = tr("Karte, $notableCount auffällige Geräte", "Map, $notableCount notable devices")
+        })
+        info?.let { t ->
+            // what the tapped dot is; a tap on it or on empty map closes it
+            Text(t, color = C.text, fontSize = 15.sp, modifier = Modifier.align(Alignment.BottomStart).padding(12.dp).fillMaxWidth(0.62f)
+                .clip(RoundedCornerShape(8.dp)).background(C.panel).clickable { info = null }.padding(12.dp))
+        }
+    }
 }
 
 /**

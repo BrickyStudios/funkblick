@@ -58,11 +58,13 @@ import io.github.brickystudios.funkblick.ui.FindScreen
 import io.github.brickystudios.funkblick.ui.FunkTheme
 import io.github.brickystudios.funkblick.ui.ListScreen
 import io.github.brickystudios.funkblick.ui.LiveScreen
+import io.github.brickystudios.funkblick.ui.LogScreen
 import io.github.brickystudios.funkblick.ui.MoreScreen
 import io.github.brickystudios.funkblick.ui.SetupScreen
 import io.github.brickystudios.funkblick.ui.TrafficWarning
 import io.github.brickystudios.funkblick.ui.UpdateDialog
 import io.github.brickystudios.funkblick.ui.setupItems
+import java.io.File
 
 /** Full-screen modes on top of the tabs. */
 private enum class Mode { TABS, CAR, DISCREET, CHANNELS }
@@ -157,6 +159,12 @@ class MainActivity : ComponentActivity() {
                     SetupScreen(items) { setup = false }
                     return@FunkTheme
                 }
+                var log by rememberSaveable { mutableStateOf<String?>(null) } // path of the old log on screen
+                log?.let { path ->
+                    BackHandler { log = null }
+                    LogScreen(File(path)) { log = null }
+                    return@FunkTheme
+                }
                 BackHandler(mode != Mode.TABS && mode != Mode.DISCREET) { mode = Mode.TABS }
                 when (mode) {
                     Mode.CAR -> CarScreen(running, ::start, { warn = true }) { if (running) ScanService.stop(this@MainActivity); mode = Mode.TABS }
@@ -171,7 +179,7 @@ class MainActivity : ComponentActivity() {
                                         onCar = { mode = Mode.CAR }, onDiscreet = { mode = Mode.DISCREET })
                                     1 -> ListScreen { open = it.id }
                                     else -> MoreScreen({ warn = true }, ::enableCarStart, onSetup = { setup = true },
-                                        setupMissing = items.count { it.required && !it.ok }, onChannels = { mode = Mode.CHANNELS })
+                                        setupMissing = items.count { it.required && !it.ok }, onChannels = { mode = Mode.CHANNELS }, onOpenLog = { log = it.path })
                                 }
                             }
                         }
