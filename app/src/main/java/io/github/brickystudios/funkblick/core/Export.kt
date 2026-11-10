@@ -35,6 +35,7 @@ data class LoggedAlert(val time: Long, val kind: String, val text: String, val a
 fun AlertReason.kind(): String = when (this) {
     AlertReason.WATCH -> "watch"
     AlertReason.TRACKER_FOLLOWING -> "tracker"
+    AlertReason.TRACKER_AGAIN -> "again"
     AlertReason.POLICE_PROBABLE -> "police"
     AlertReason.PRIORITY -> "priority"
     AlertReason.CAMERA -> "camera"

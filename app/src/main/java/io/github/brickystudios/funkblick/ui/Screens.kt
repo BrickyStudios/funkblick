@@ -90,7 +90,7 @@ fun rememberNow(): Long {
 }
 
 fun kindColor(kind: String): Color = when (kind) {
-    "tracker", "speedcam" -> C.red
+    "tracker", "again", "speedcam" -> C.red
     "priority", "police" -> C.blue
     "camera" -> Category.CAMERA.color()
     "hacker" -> Category.HACKER.color()
@@ -105,7 +105,7 @@ fun AlertRow(a: LoggedAlert, now: Long, onClick: (() -> Unit)? = null) {
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(col.copy(alpha = 0.12f))
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .semantics { liveRegion = if (a.kind == "tracker" || a.kind == "priority") LiveRegionMode.Assertive else LiveRegionMode.Polite }
+            .semantics { liveRegion = if (a.kind == "tracker" || a.kind == "again" || a.kind == "priority") LiveRegionMode.Assertive else LiveRegionMode.Polite }
             .padding(16.dp),
     ) {
         Text(a.text, color = C.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
@@ -251,7 +251,7 @@ fun LiveScreen(running: Boolean, demo: Boolean, onStart: () -> Unit, onStop: () 
         if (!showMap && devices.isNotEmpty()) item { Legend(devices) }
         alerts.firstOrNull()?.takeIf { now - it.time < 180_000 }?.let { a ->
             item(key = "alert-${a.time}") {
-                AlertRow(a, now, onClick = if (a.kind == "tracker") ({ devices.firstOrNull { it.address == a.address }?.let { onFind(it.id) } }) else null)
+                AlertRow(a, now, onClick = if (a.kind == "tracker" || a.kind == "again") ({ devices.firstOrNull { it.address == a.address }?.let { onFind(it.id) } }) else null)
             }
         }
         item {
@@ -389,7 +389,7 @@ fun DeviceSheet(d: Device, onFind: () -> Unit, onDismiss: () -> Unit) {
             Text(m.name(d) ?: d.cls.tracker?.kind?.label ?: tr("Ohne Namen", "No name"), color = C.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
             Text(d.whyLine(), color = C.dim, fontSize = 15.sp)
             d.police?.let { Text(it.why, color = C.blue, fontSize = 15.sp, lineHeight = 21.sp) }
-            Funk.seenBefore(d)?.let { Text(tr("Schon am $it gesehen", "Seen before on $it"), color = C.amber, fontSize = 15.sp) }
+            Funk.seenBefore(d).takeIf { it.isNotEmpty() }?.let { Text(tr("Schon gesehen: ", "Seen before: ") + it.take(3).joinToString(" · ") { t -> sessionLabel(t) }, color = C.amber, fontSize = 15.sp) }
             Gap(12)
             BigButton(tr("Peilen: hingehen und finden", "Find it: walk towards it"), filled = true, onClick = onFind)
             Header(tr("Daten", "Details"))

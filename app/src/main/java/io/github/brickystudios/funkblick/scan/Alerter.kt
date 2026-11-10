@@ -120,7 +120,7 @@ class Alerter(private val context: Context) {
 
     private fun vibrate(kind: String) {
         val pattern = when (kind) {
-            "tracker" -> longArrayOf(0, 120, 80, 120, 80, 400)
+            "tracker", "again" -> longArrayOf(0, 120, 80, 120, 80, 400)
             "priority" -> longArrayOf(0, 200, 100, 200)
             "police" -> longArrayOf(0, 200, 100, 200, 100, 200)
             "speedcam" -> longArrayOf(0, 60, 60, 60, 60, 250)

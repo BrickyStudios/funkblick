@@ -10,7 +10,7 @@ data class AlertSettings(
     val hackers: Boolean = true, // Flipper Zero, WiFi Pineapple, Bluetooth spam, evil twin Wi-Fi, skimmer modules
 )
 
-enum class AlertReason { WATCH, TRACKER_FOLLOWING, POLICE_PROBABLE, PRIORITY, CAMERA, FLEET, VEHICLE_FOLLOWING, HOME_NEW, HACKER, BLE_SPAM, EVIL_TWIN }
+enum class AlertReason { WATCH, TRACKER_FOLLOWING, TRACKER_AGAIN, POLICE_PROBABLE, PRIORITY, CAMERA, FLEET, VEHICLE_FOLLOWING, HOME_NEW, HACKER, BLE_SPAM, EVIL_TWIN }
 
 data class Alert(val device: Device, val reason: AlertReason)
 
@@ -44,6 +44,9 @@ class Session(private val classifier: Classifier, private val now: () -> Long = 
     private var lastLon: Double? = null
     var startedAt = now()
         private set
+
+    /** Set by the store: did this device come along in an earlier session too (Memory.kt)? */
+    var cameAlongBefore: (Device) -> Boolean = { false }
 
     /** Home watch (Home.kt): set by the store, kept across sessions. */
     var home: HomeWatch? = null
@@ -125,6 +128,8 @@ class Session(private val classifier: Classifier, private val now: () -> Long = 
         // without GPS the 10 minutes alone decide; with GPS the tag also has to come along to 3 places
         val moved = d.places == 0 || d.places >= FOLLOW_PLACES
         if (settings.trackers && t != null && t.kind.isTag && t.separated == true && streakMs >= FOLLOW_MS && moved) return AlertReason.TRACKER_FOLLOWING
+        // came along now and on an earlier drive: two short drives with the same tag say more than ten minutes of one
+        if (settings.trackers && d.cameAlong(streakMs) && cameAlongBefore(d)) return AlertReason.TRACKER_AGAIN
         if (settings.cameras && c.category == Category.CAMERA && (!driving || streakMs >= CAMERA_DRIVING_MS)) return AlertReason.CAMERA
         if (settings.hackers && c.category == Category.HACKER) return AlertReason.HACKER
         if (settings.traffic && d.police?.level == PoliceLevel.PROBABLE) return AlertReason.POLICE_PROBABLE
@@ -177,6 +182,7 @@ fun Device.followingMinutes(): Long? {
 fun AlertReason.label(): String = when (this) {
     AlertReason.WATCH -> tr("Beobachtetes Gerät in der Nähe", "Watched device nearby")
     AlertReason.TRACKER_FOLLOWING -> tr("Tracker begleitet dich seit über 10 Minuten", "A tracker has been with you for over 10 minutes")
+    AlertReason.TRACKER_AGAIN -> tr("Tracker war schon bei einer früheren Fahrt dabei", "This tracker came along on an earlier drive too")
     AlertReason.POLICE_PROBABLE -> tr("Wahrscheinlich Polizei in der Nähe", "Probably police nearby")
     AlertReason.PRIORITY -> tr("Mögliche Behörden-/Einsatztechnik in der Nähe", "Possible public safety gear nearby")
     AlertReason.VEHICLE_FOLLOWING -> tr("Ein Fahrzeug fährt seit Minuten mit dir", "A vehicle has been with you for minutes")

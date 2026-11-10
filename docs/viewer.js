@@ -25,7 +25,7 @@
   const ORDER = Object.keys(CAT);
   const catName = (c) => (CAT[c] || CAT.UNKNOWN)[de ? 1 : 2];
   const catColor = (c) => (CAT[c] || CAT.UNKNOWN)[0];
-  const ALERT = { tracker: "#FF4D5E", speedcam: "#FF4D5E", priority: "#6E95F0", police: "#6E95F0", camera: "#D27BE8", hacker: "#FF6FB5", fleet: "#F0904E", follow: "#F0904E" };
+  const ALERT = { tracker: "#FF4D5E", again: "#FF4D5E", speedcam: "#FF4D5E", priority: "#6E95F0", police: "#6E95F0", camera: "#D27BE8", hacker: "#FF6FB5", fleet: "#F0904E", follow: "#F0904E" };
 
   const log = { meta: null, devices: [], alerts: [], track: [], points: [] };
   const $ = (id) => document.getElementById(id);

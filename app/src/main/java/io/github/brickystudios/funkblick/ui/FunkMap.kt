@@ -87,6 +87,7 @@ private const val GRID_STYLE = """{"version":8,"sources":{},"layers":[{"id":"bac
 
 private const val SRC_TRACK = "fb-track"
 private const val SRC_CAMS = "fb-cams"
+private const val SRC_KNOWN = "fb-known"
 private const val SRC_TRAFFIC = "fb-traffic"
 private const val SRC_NOTABLE = "fb-notable"
 private const val SRC_OTHER = "fb-other"
@@ -108,6 +109,7 @@ private fun addOverlay(style: Style, light: Boolean) {
     style.addSource(GeoJsonSource(SRC_TRACK, empty))
     style.addSource(GeoJsonSource(SRC_CAMS, empty))
     style.addSource(GeoJsonSource(SRC_TRAFFIC, empty))
+    style.addSource(GeoJsonSource(SRC_KNOWN, empty))
     style.addSource(GeoJsonSource(SRC_RING, empty))
     style.addSource(GeoJsonSource(SRC_NOTABLE, empty))
     // everything else is bundled into numbers until you zoom into a street (plan 7E)
@@ -127,6 +129,9 @@ private fun addOverlay(style: Style, light: Boolean) {
     style.addLayer(CircleLayer("fb-traffic", SRC_TRAFFIC).withProperties(P.circleColor(Expression.toColor(Expression.get("c"))), P.circleRadius(5f),
         P.circleStrokeColor("#0D0C0A"), P.circleStrokeWidth(1.5f)))
     style.addLayer(CircleLayer("fb-cams", SRC_CAMS).withProperties(P.circleColor("#FF4D5E"), P.circleRadius(7f), P.circleStrokeColor("#F2E8D5"), P.circleStrokeWidth(2f)))
+    // cameras from earlier drives: hollow, under today's filled dot when the same camera is heard again
+    style.addLayer(CircleLayer("fb-known", SRC_KNOWN).withProperties(P.circleColor("#0D0C0A"), P.circleRadius(6f),
+        P.circleStrokeColor(hex(Category.CAMERA.color())), P.circleStrokeWidth(2.5f)))
     style.addLayer(CircleLayer(LAYER_OTHER_CLUSTER, SRC_OTHER).withFilter(Expression.has("point_count")).withProperties(
         P.circleColor("#2A2418"), P.circleRadius(14f), P.circleStrokeColor("#6B5A3A"), P.circleStrokeWidth(1f)).also { it.minZoom = 15f })
     style.addLayer(SymbolLayer(LAYER_OTHER_COUNT, SRC_OTHER).withFilter(Expression.has("point_count")).withProperties(
@@ -277,6 +282,12 @@ fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow:
         style?.getSourceAs<GeoJsonSource>(SRC_ROUTE)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(route?.let { r ->
             Feature.fromGeometry(LineString.fromLngLats(r.shape.map { (la, lo) -> Point.fromLngLat(lo, la) }))
         })))
+    }
+    val known by Funk.knownCams.collectAsStateWithLifecycle()
+    // where earlier drives went: not in the demo and not with "Mask the screen", both are for screenshots
+    val hideKnown = Funk.settings.collectAsStateWithLifecycle().value.safeScreen || Funk.demo.collectAsStateWithLifecycle().value
+    LaunchedEffect(style, known, hideKnown) { // changes once a minute at most, not with every scan
+        style?.getSourceAs<GeoJsonSource>(SRC_KNOWN)?.setGeoJson(FeatureCollection.fromFeatures(if (hideKnown) emptyList() else known.map { Feature.fromGeometry(Point.fromLngLat(it.lon, it.lat)) }))
     }
     LaunchedEffect(style, nearby) { // with "All devices" the bundled others show before street zoom too
         style?.let { s -> for (id in listOf(LAYER_OTHER_CLUSTER, LAYER_OTHER_COUNT, LAYER_OTHER)) s.getLayer(id)?.minZoom = if (nearby) 0f else 15f }

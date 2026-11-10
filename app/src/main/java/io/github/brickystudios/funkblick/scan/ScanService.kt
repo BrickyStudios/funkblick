@@ -156,7 +156,7 @@ class ScanService : Service() {
         alerter.play(a.reason.kind(), voice = true)
         val d = a.device
         val name = Funk.screenMasker().name(d) ?: tr("ohne Namen", "no name")
-        alerter.notify(d.id.hashCode(), a.reason.label(), "$name, ${d.rssi} dBm", if (a.reason == io.github.brickystudios.funkblick.core.AlertReason.TRACKER_FOLLOWING) d.id else null)
+        alerter.notify(d.id.hashCode(), a.reason.label(), "$name, ${d.rssi} dBm", if (a.reason == io.github.brickystudios.funkblick.core.AlertReason.TRACKER_FOLLOWING || a.reason == io.github.brickystudios.funkblick.core.AlertReason.TRACKER_AGAIN) d.id else null)
     }
 
     // ------------------------------------------------------------- Wi-Fi

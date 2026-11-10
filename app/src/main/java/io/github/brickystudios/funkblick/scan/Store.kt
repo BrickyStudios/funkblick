@@ -10,6 +10,10 @@ import io.github.brickystudios.funkblick.core.AlertReason
 import io.github.brickystudios.funkblick.core.HomeWatch
 import io.github.brickystudios.funkblick.core.Category
 import io.github.brickystudios.funkblick.core.isFollowingVehicle
+import io.github.brickystudios.funkblick.core.KnownCam
+import io.github.brickystudios.funkblick.core.addSession
+import io.github.brickystudios.funkblick.core.cameAlong
+import io.github.brickystudios.funkblick.core.merge
 import io.github.brickystudios.funkblick.core.AlertSettings
 import io.github.brickystudios.funkblick.core.CamAhead
 import io.github.brickystudios.funkblick.core.Classifier
@@ -135,7 +139,9 @@ object Funk {
         ouiSize = oui.size
         classifier = Classifier(oui)
         session = Session(classifier)
+        session.cameAlongBefore = { seenBefore(it).isNotEmpty() }
         loadSpeedCams()
+        loadCams()
         val prefs = prefs()
         prefs.getString("settings", null)?.let { s -> runCatching { gson.fromJson(s, Settings::class.java) }.getOrNull()?.let { _settings.value = it } }
         // the place is a handful of Wi-Fi ids, no coordinates; it stays in the app's own storage and never goes into a log
@@ -357,34 +363,78 @@ object Funk {
         return n
     }
 
-    // ---------------------------------------------------------------- seen on an earlier day
+    // ---------------------------------------------------------------- what came along before, where cameras were
 
-    private val seen: HashMap<String, String> by lazy {
-        runCatching { gson.fromJson<HashMap<String, String>>(prefs().getString("seen", "{}"), object : TypeToken<HashMap<String, String>>() {}.type) }
-            .getOrNull() ?: HashMap()
+    /** Salted hash -> start times of the sessions it came along in (Memory.kt). Can't be read back into addresses. */
+    private val seen: HashMap<String, MutableList<Long>> by lazy { loadSeen() }
+
+    /** Cameras from earlier sessions where their signal put them, for the map. Only in the app's own storage (allowBackup=false). */
+    private val cams = HashMap<String, KnownCam>()
+    val knownCams = MutableStateFlow<List<KnownCam>>(emptyList())
+
+    private fun loadSeen(): HashMap<String, MutableList<Long>> {
+        val p = prefs()
+        p.getString("seenAt", null)?.let { s ->
+            return runCatching { gson.fromJson<HashMap<String, MutableList<Long>>>(s, object : TypeToken<HashMap<String, MutableList<Long>>>() {}.type) }.getOrNull() ?: HashMap()
+        }
+        // up to 1.11 one date per device ("dd.MM.yyyy"): it becomes one session at noon that day
+        val old = runCatching { gson.fromJson<HashMap<String, String>>(p.getString("seen", "{}"), object : TypeToken<HashMap<String, String>>() {}.type) }.getOrNull().orEmpty()
+        val day = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY)
+        return HashMap(old.mapNotNull { (k, v) -> runCatching { k to mutableListOf(day.parse(v)!!.time + 12 * 3_600_000L) }.getOrNull() }.toMap())
     }
 
-    /** Salted hash: the list can't be read back into addresses, it only answers "seen before?". */
+    private fun loadCams() {
+        runCatching { gson.fromJson<HashMap<String, KnownCam>>(prefs().getString("knownCams", "{}"), object : TypeToken<HashMap<String, KnownCam>>() {}.type) }
+            .getOrNull()?.let { cams.putAll(it) }
+        knownCams.value = cams.values.toList()
+    }
+
+    private val seenSecret: String by lazy {
+        prefs().getString("seenSalt", null) ?: UUID.randomUUID().toString().also { prefs().edit().putString("seenSalt", it).apply() }
+    }
+
+    /** Salted hash: the lists can't be read back into addresses, they only answer "seen before?". */
     private fun seenKey(d: Device): String {
-        val secret = prefs().getString("seenSalt", null) ?: UUID.randomUUID().toString().also { prefs().edit().putString("seenSalt", it).apply() }
-        val h = java.security.MessageDigest.getInstance("SHA-256").digest((secret + d.address + (d.name ?: "")).toByteArray())
+        val h = java.security.MessageDigest.getInstance("SHA-256").digest((seenSecret + d.address + (d.name ?: "")).toByteArray())
         return h.take(12).joinToString("") { "%02x".format(it) }
     }
 
-    private fun worthRemembering(d: Device) = d.isFollowingVehicle() || d.police != null || d.cls.category == Category.PRIORITY ||
-        d.cls.category == Category.FLEET || (d.cls.category == Category.TRACKER && d.cls.tracker?.separated == true)
+    private fun worthRemembering(d: Device) = d.cameAlong() || d.isFollowingVehicle() || d.police != null ||
+        d.cls.category in setOf(Category.PRIORITY, Category.FLEET, Category.CAMERA)
 
-    private fun today() = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY).format(Date())
-
-    /** The day this vehicle, router or tag was first seen, if that was an earlier day. */
-    fun seenBefore(d: Device): String? = if (!worthRemembering(d)) null else seen[seenKey(d)]?.takeIf { it != today() }
+    /** Start times of earlier sessions this tag, vehicle, router or camera was seen in, newest first. */
+    fun seenBefore(d: Device): List<Long> = seen[seenKey(d)].orEmpty().filter { it != session.startedAt }.reversed()
 
     private fun rememberSeen() {
         var changed = false
-        for (d in session.devices.values) if (worthRemembering(d)) seen.getOrPut(seenKey(d)) { changed = true; today() }
-        if (!changed) return
-        val keep = if (seen.size > 5000) seen.entries.sortedBy { it.value }.takeLast(5000).associate { it.key to it.value } else seen
-        prefs().edit().putString("seen", gson.toJson(keep)).apply()
+        var camsChanged = false
+        for (d in session.devices.values) {
+            if (worthRemembering(d)) {
+                val list = seen.getOrPut(seenKey(d)) { mutableListOf() }
+                if (list.lastOrNull() != session.startedAt) { list.addSession(session.startedAt); changed = true }
+            }
+            val p = d.pos
+            if (d.cls.category == Category.CAMERA && d.cls.mute == null && p != null) {
+                val k = seenKey(d)
+                val n = cams[k].merge(KnownCam(p.lat, p.lon, p.radiusM, d.name ?: d.cls.vendor ?: "", d.lastSeen))
+                if (n != cams[k]) { cams[k] = n; camsChanged = true }
+            }
+        }
+        if (changed) {
+            if (seen.size > 5000) seen.entries.sortedBy { it.value.lastOrNull() ?: 0L }.take(seen.size - 5000).forEach { seen.remove(it.key) }
+            prefs().edit().putString("seenAt", gson.toJson(seen)).remove("seen").apply()
+        }
+        if (camsChanged) {
+            if (cams.size > 2000) cams.entries.sortedBy { it.value.lastSeen }.take(cams.size - 2000).forEach { cams.remove(it.key) }
+            prefs().edit().putString("knownCams", gson.toJson(cams)).apply()
+            knownCams.value = cams.values.toList()
+        }
+    }
+
+    /** Forgets all earlier sessions: what came along and where the cameras were. */
+    fun forgetMemory() {
+        seen.clear(); cams.clear(); knownCams.value = emptyList()
+        prefs().edit().remove("seen").remove("seenAt").remove("knownCams").apply()
     }
 
     fun logs(): List<File> = logDir().listFiles { f -> f.name.endsWith(".json") }?.sortedByDescending { it.lastModified() } ?: emptyList()

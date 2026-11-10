@@ -150,6 +150,10 @@ fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetu
             initMap(context) // starts MapLibre if no map was shown yet (setConnected alone crashed then), applies the switch
         }
         Toggle("Bluetooth", tr("Aus = nur WLAN, spart Akku", "Off = Wi-Fi only, saves battery"), s.ble) { v -> Funk.updateSettings { it.copy(ble = v) } }
+        val known by Funk.knownCams.collectAsStateWithLifecycle()
+        Text(tr("Funkblick merkt sich über Fahrten hinweg, welche Tracker mitgefahren sind (nur als Prüfsumme) und wo Kameras stehen (${known.size} auf der Karte). Das zeigt auch, wo du warst.",
+            "Funkblick remembers across drives which trackers came along (as a checksum only) and where cameras are (${known.size} on the map). That also shows where you've been."), color = C.dim, fontSize = 13.sp)
+        TextAction(tr("Frühere Fahrten vergessen", "Forget earlier drives"), color = C.red) { Funk.forgetMemory() }
 
         Header(tr("Eigene Regeln", "Your rules"), trailing = "${rules.size}")
         Text(tr("Beobachten = Warnung, sobald es auftaucht. Stumm = nie warnen. Polizei = von dir gesehen, gilt ab jetzt als „wahrscheinlich Polizei“ (gewarnt wird nur mit Verkehrs-Hinweisen). Stumm gewinnt.",

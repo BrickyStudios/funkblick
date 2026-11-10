@@ -23,6 +23,7 @@ SR = 44_100
 
 LINES = {
     "tracker": ("Achtung. Ein Tracker ist seit zehn Minuten bei dir.", "Warning. A tracker has been with you for ten minutes."),
+    "again": ("Achtung. Dieser Tracker war schon bei einer früheren Fahrt dabei.", "Warning. This tracker came along on an earlier drive too."),
     "priority": ("Mögliche Polizei- oder Einsatztechnik.", "Possible police or emergency gear."),
     "speedcam": ("Blitzer voraus.", "Speed camera ahead."),
     "camera": ("Kamera in der Nähe.", "Camera nearby."),
@@ -142,6 +143,7 @@ TONES = {
     # scan stop: falling triad
     "stop": seq((0, tone(784, 0.12, 0.06)), (0.09, tone(659, 0.12, 0.06)), (0.18, tone(523, 0.3, 0.15))),
 }
+TONES["again"] = TONES["tracker"]  # same alarm as a following tag, its own sentence
 
 
 def write_wav(path, x):

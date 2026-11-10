@@ -193,6 +193,14 @@ fun TextAction(text: String, color: Color = C.amber, onClick: () -> Unit) {
 @Composable
 fun Gap(h: Int = 8) = Spacer(Modifier.height(h.dp).width(0.dp))
 
+/** When an earlier session started: "heute 08:12" or "09.11. 17:40". */
+fun sessionLabel(ms: Long): String {
+    val day = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.ROOT)
+    val time = java.text.SimpleDateFormat("HH:mm", java.util.Locale.ROOT).format(java.util.Date(ms))
+    return if (day.format(java.util.Date(ms)) == day.format(java.util.Date())) tr("heute $time", "today $time")
+    else java.text.SimpleDateFormat("dd.MM.", java.util.Locale.ROOT).format(java.util.Date(ms)) + " $time"
+}
+
 fun ago(ms: Long, now: Long = System.currentTimeMillis()): String {
     val s = ((now - ms) / 1000).coerceAtLeast(0)
     return when {
