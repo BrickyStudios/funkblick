@@ -64,3 +64,18 @@ fun readLog(json: String, route: String?): PastSession {
     val alerts = if (exact == null) logged else logged.mapIndexed { i, a -> a.copy(lat = exact[i]?.lat, lon = exact[i]?.lon) }
     return PastSession(time(root.str("session_start")), devices, alerts, r?.track.orEmpty())
 }
+
+/** Every log as one, for the map of all drives. A device heard on two drives keeps both places; newest sighting first. */
+fun mergeSessions(all: List<PastSession>) = PastSession(
+    all.minOfOrNull { it.startedAt } ?: 0L,
+    all.flatMap { it.devices }.sortedByDescending { it.lastSeen },
+    all.flatMap { it.alerts }.sortedBy { it.time },
+    all.sortedBy { it.startedAt }.flatMap { it.track },
+)
+
+/** A track cut where it paused for over 10 minutes, so two drives on one map get no line from the end of one to the start of the next. */
+fun <T> legs(track: List<T>, time: (T) -> Long): List<List<T>> {
+    val out = mutableListOf<MutableList<T>>()
+    for (p in track) if (out.isEmpty() || time(p) - time(out.last().last()) > 10 * 60_000) out += mutableListOf(p) else out.last() += p
+    return out
+}

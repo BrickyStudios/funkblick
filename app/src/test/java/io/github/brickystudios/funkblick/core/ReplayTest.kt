@@ -44,4 +44,18 @@ class ReplayTest {
         val json = toJson(devices, meta, Masker(false, "s")).replaceFirst("\"category\": \"", "\"category\": \"FUTURE_")
         assertEquals(devices.size - 1, readLog(json, "not json").devices.size)
     }
+
+    @Test fun allLogsOnOneMapKeepEveryDriveApart() {
+        val later = track.map { it.copy(time = it.time + 86_400_000L) }
+        val a = PastSession(1_000_000_000L, devices, listOf(alert), track)
+        val b = PastSession(1_086_400_000L, devices.map { it.copy(lastSeen = it.lastSeen + 86_400_000L) }, emptyList(), later)
+        val all = mergeSessions(listOf(b, a))
+        assertEquals(1_000_000_000L, all.startedAt)
+        assertEquals(track + later, all.track)
+        assertEquals(devices.size * 2, all.devices.size) // the same device on two drives: two places on the map
+        assertTrue(all.devices.first().lastSeen >= all.devices.last().lastSeen)
+        assertEquals(listOf(track, later), legs(all.track) { it.time })
+        assertEquals(listOf(track), legs(track) { it.time })
+        assertTrue(legs(emptyList<TrackPoint>()) { it.time }.isEmpty())
+    }
 }

@@ -38,11 +38,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/** An old log opened from More: the route with devices and alerts on the map, the review, and every device. */
+/**
+ * An old log opened from More: the route with devices and alerts on the map, the review, and every device.
+ * [file] null: every log at once, the map of all drives, also with no scan running.
+ */
 @Composable
-fun LogScreen(file: File, onClose: () -> Unit) {
+fun LogScreen(file: File?, onClose: () -> Unit) {
     // a long drive is a 1 MB log: read it off the main thread
-    val loaded by produceState<Result<PastSession>?>(null, file) { value = withContext(Dispatchers.IO) { runCatching { Funk.openLog(file) } } }
+    val loaded by produceState<Result<PastSession>?>(null, file) {
+        value = withContext(Dispatchers.IO) { runCatching { if (file == null) Funk.openAllLogs() else Funk.openLog(file) } }
+    }
     val settings by Funk.settings.collectAsStateWithLifecycle()
     val m = remember(settings.safeScreen) { Funk.screenMasker() }
     var open by rememberSaveable { mutableStateOf<String?>(null) }
@@ -52,27 +57,34 @@ fun LogScreen(file: File, onClose: () -> Unit) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp).heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
             TextAction(tr("← Zurück", "← Back"), onClick = onClose)
             Spacer(Modifier.weight(1f))
-            Text(p?.let { sessionLabel(it.startedAt) } ?: file.nameWithoutExtension.removePrefix("funkblick-").replace('_', ' '),
+            Text(if (file == null) tr("Alle Fahrten", "All drives") else p?.let { sessionLabel(it.startedAt) } ?: file.nameWithoutExtension.removePrefix("funkblick-").replace('_', ' '),
                 fontFamily = Display, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = C.amber)
         }
         when {
             loaded == null -> Text(tr("Lädt …", "Loading ..."), color = C.dim, fontSize = 15.sp, modifier = Modifier.padding(16.dp))
             p == null -> Text(tr("Dieses Log lässt sich nicht lesen.", "This log can't be read."), color = C.red, fontSize = 15.sp, modifier = Modifier.padding(16.dp))
             else -> LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (p.track.size > 1 || p.devices.any { it.pos != null } || p.alerts.any { it.lat != null }) item {
-                    FunkMap(Modifier.fillMaxWidth().height(420.dp).clip(RoundedCornerShape(8.dp)), follow = false, past = p, onTap = { open = it })
+                if (file == null || p.track.size > 1 || p.devices.any { it.pos != null } || p.alerts.any { it.lat != null }) item {
+                    FunkMap(Modifier.fillMaxWidth().height(420.dp).clip(RoundedCornerShape(8.dp)), follow = false, past = p, allDrives = file == null, onTap = { open = it })
                 }
                 // logs before 1.13 have no route file: only alerts carry a place, and in safe mode only to about 1 km
                 if (p.track.size < 2) item { Text(tr("Ohne Route: Logs speichern die Strecke erst ab Version 1.13.", "No route: logs keep the drive only from version 1.13."), color = C.dim, fontSize = 14.sp) }
-                item { Recap(p.devices, p.alerts, p.track, title = tr("Rückblick", "Review")) }
-                val top = notable(p.devices)
+                // across days a review would add up hours and the gaps between drives: the map is the point here
+                if (file == null) item {
+                    Text(tr("Alles aus allen Logs. Hohle Ringe: Kameras aus früheren Fahrten, die wahrscheinlich noch dort hängen.",
+                        "Everything from all logs. Hollow rings: cameras from earlier drives, probably still there."), color = C.dim, fontSize = 14.sp)
+                } else item { Recap(p.devices, p.alerts, p.track, title = tr("Rückblick", "Review")) }
+                // one row per device: a device from several drives is listed once, with its newest sighting (the map keeps every place)
+                val list = if (file == null) p.devices.distinctBy { it.id } else p.devices
+                fun seen(ms: Long) = if (file == null) sessionLabel(ms) else clock.format(java.util.Date(ms))
+                val top = notable(list)
                 if (top.isNotEmpty()) {
                     item { Header(tr("Auffällig", "Notable"), trailing = "${top.size}") }
-                    items(top) { d -> DeviceRow(d, m, 0, time = clock.format(java.util.Date(d.lastSeen))) { open = d.id } }
+                    items(top) { d -> DeviceRow(d, m, 0, time = seen(d.lastSeen)) { open = d.id } }
                 }
-                item { Header(tr("Alle Geräte, stärkstes Signal zuerst", "All devices, strongest first"), trailing = "${p.devices.size}") }
+                item { Header(tr("Alle Geräte, stärkstes Signal zuerst", "All devices, strongest first"), trailing = "${list.size}") }
                 // no keys: in safe mode two shortened addresses can collide
-                items(p.devices.sortedByDescending { it.rssiMax }) { d -> DeviceRow(d, m, 0, time = clock.format(java.util.Date(d.lastSeen))) { open = d.id } }
+                items(list.sortedByDescending { it.rssiMax }) { d -> DeviceRow(d, m, 0, time = seen(d.lastSeen)) { open = d.id } }
             }
         }
     }

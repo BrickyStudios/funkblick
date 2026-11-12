@@ -159,10 +159,10 @@ class MainActivity : ComponentActivity() {
                     SetupScreen(items) { setup = false }
                     return@FunkTheme
                 }
-                var log by rememberSaveable { mutableStateOf<String?>(null) } // path of the old log on screen
+                var log by rememberSaveable { mutableStateOf<String?>(null) } // path of the old log on screen, "" = all of them
                 log?.let { path ->
                     BackHandler { log = null }
-                    LogScreen(File(path)) { log = null }
+                    LogScreen(path.takeIf { it.isNotEmpty() }?.let(::File)) { log = null }
                     return@FunkTheme
                 }
                 BackHandler(mode != Mode.TABS && mode != Mode.DISCREET) { mode = Mode.TABS }
@@ -176,7 +176,7 @@ class MainActivity : ComponentActivity() {
                                 when (t) {
                                     0 -> LiveScreen(running, demo, ::start, { ScanService.stop(this@MainActivity) }, { Funk.loadDemo() },
                                         onOpen = { open = it.id }, onFind = { find = it; findHelp.value = true },
-                                        onCar = { mode = Mode.CAR }, onDiscreet = { mode = Mode.DISCREET })
+                                        onCar = { mode = Mode.CAR }, onDiscreet = { mode = Mode.DISCREET }, onAllDrives = { log = "" })
                                     1 -> ListScreen { open = it.id }
                                     else -> MoreScreen({ warn = true }, ::enableCarStart, onSetup = { setup = true },
                                         setupMissing = items.count { it.required && !it.ok }, onChannels = { mode = Mode.CHANNELS }, onOpenLog = { log = it.path })

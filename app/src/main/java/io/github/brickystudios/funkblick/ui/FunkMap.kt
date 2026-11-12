@@ -34,6 +34,7 @@ import io.github.brickystudios.funkblick.core.Category
 import io.github.brickystudios.funkblick.core.Device
 import io.github.brickystudios.funkblick.core.PastSession
 import io.github.brickystudios.funkblick.core.label
+import io.github.brickystudios.funkblick.core.legs
 import io.github.brickystudios.funkblick.core.distanceFromRssi
 import io.github.brickystudios.funkblick.core.isFollowingVehicle
 import io.github.brickystudios.funkblick.core.metersToLat
@@ -204,8 +205,8 @@ private fun update(style: Style, devices: List<Device>, fix: Fix?, track: List<F
     val notable = devices.filter { it.cls.mute == null && (it.cls.watch != null || it.cls.category.ordinal <= Category.FLEET.ordinal) }
     src(SRC_NOTABLE)?.setGeoJson(FeatureCollection.fromFeatures(notable.mapNotNull { it.feature() }))
     src(SRC_OTHER)?.setGeoJson(FeatureCollection.fromFeatures((devices - notable.toSet()).filter { !it.own }.mapNotNull { it.feature() }))
-    if (track.size > 1) src(SRC_TRACK)?.setGeoJson(FeatureCollection.fromFeatures(listOf(
-        Feature.fromGeometry(LineString.fromLngLats(track.map { Point.fromLngLat(it.lon, it.lat) })))))
+    if (track.size > 1) src(SRC_TRACK)?.setGeoJson(FeatureCollection.fromFeatures(legs(track) { it.time }.filter { it.size > 1 }
+        .map { leg -> Feature.fromGeometry(LineString.fromLngLats(leg.map { Point.fromLngLat(it.lon, it.lat) })) }))
     val rings = mutableListOf<Feature>()
     if (fix != null) {
         src(SRC_ME)?.setGeoJson(Feature.fromGeometry(Point.fromLngLat(fix.lon, fix.lat)).also { it.addStringProperty("t", tr("Du bist hier", "You are here")) })
@@ -243,10 +244,11 @@ fun initMap(context: Context) {
  * follow: camera follows your position (and turns with the driving direction when moving).
  * nearby: also devices without a position estimate, around you (off in car mode, kept simple).
  * onTap: a device was tapped (its id). onOffline: the online style couldn't load.
+ * allDrives: [past] is every log at once, so cameras from earlier drives belong on it too.
  */
 @Composable
 fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow: Boolean = true, selected: String? = null, nearby: Boolean = false,
-            past: PastSession? = null, onTap: ((String) -> Unit)? = null, onFollowLost: () -> Unit = {}, onOffline: (Boolean) -> Unit = {}) {
+            past: PastSession? = null, allDrives: Boolean = false, onTap: ((String) -> Unit)? = null, onFollowLost: () -> Unit = {}, onOffline: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val liveDevices by Funk.devices.collectAsStateWithLifecycle()
@@ -339,7 +341,7 @@ fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow:
     }
     val known by Funk.knownCams.collectAsStateWithLifecycle()
     // where earlier drives went: not in the demo and not with "Mask the screen", both are for screenshots
-    val hideKnown = Funk.settings.collectAsStateWithLifecycle().value.safeScreen || Funk.demo.collectAsStateWithLifecycle().value || past != null
+    val hideKnown = Funk.settings.collectAsStateWithLifecycle().value.safeScreen || Funk.demo.collectAsStateWithLifecycle().value || (past != null && !allDrives)
     LaunchedEffect(style, known, hideKnown) { // changes once a minute at most, not with every scan
         style?.getSourceAs<GeoJsonSource>(SRC_KNOWN)?.setGeoJson(FeatureCollection.fromFeatures(if (hideKnown) emptyList() else known.map { k ->
             Feature.fromGeometry(Point.fromLngLat(k.lon, k.lat)).also { it.addStringProperty("t", tr("Kamera aus früherer Fahrt", "Camera from an earlier drive") +
@@ -357,7 +359,8 @@ fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow:
         }))
         // the whole drive in view: route, devices and alerts
         val pts = (past ?: return@LaunchedEffect).track.map { LatLng(it.lat, it.lon) } + past.devices.mapNotNull { d -> d.pos?.let { LatLng(it.lat, it.lon) } } +
-            past.alerts.mapNotNull { a -> if (a.lat != null && a.lon != null) LatLng(a.lat, a.lon) else null }
+            past.alerts.mapNotNull { a -> if (a.lat != null && a.lon != null) LatLng(a.lat, a.lon) else null } +
+            (if (hideKnown) emptyList() else known.map { LatLng(it.lat, it.lon) })
         val m = map ?: return@LaunchedEffect
         when {
             pts.isEmpty() -> {}

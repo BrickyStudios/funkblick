@@ -32,6 +32,7 @@ import io.github.brickystudios.funkblick.core.label
 import io.github.brickystudios.funkblick.core.toJson
 import io.github.brickystudios.funkblick.core.PastSession
 import io.github.brickystudios.funkblick.core.TrackPoint
+import io.github.brickystudios.funkblick.core.mergeSessions
 import io.github.brickystudios.funkblick.core.readLog
 import io.github.brickystudios.funkblick.core.routeJson
 import io.github.brickystudios.funkblick.core.overpassQuery
@@ -360,6 +361,9 @@ object Funk {
 
     /** Reads a saved log back for the map. Slow for big logs (1 MB): call it off the main thread. */
     fun openLog(log: File): PastSession = readLog(log.readText(), routeOf(log).takeIf { it.exists() }?.readText())
+
+    /** All logs as one session for the map of all drives; a log that can't be read is left out. Off the main thread. */
+    fun openAllLogs(): PastSession = mergeSessions(logs().mapNotNull { runCatching { openLog(it) }.getOrNull() })
 
     fun deleteLog(log: File) {
         log.delete()

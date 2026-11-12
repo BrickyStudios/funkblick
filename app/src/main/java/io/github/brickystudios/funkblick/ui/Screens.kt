@@ -190,7 +190,7 @@ private var all by mutableStateOf(false)
 
 @Composable
 fun LiveScreen(running: Boolean, demo: Boolean, onStart: () -> Unit, onStop: () -> Unit, onDemo: () -> Unit,
-               onOpen: (Device) -> Unit, onFind: (String) -> Unit, onCar: () -> Unit, onDiscreet: () -> Unit) {
+               onOpen: (Device) -> Unit, onFind: (String) -> Unit, onCar: () -> Unit, onDiscreet: () -> Unit, onAllDrives: () -> Unit) {
     val context = LocalContext.current
     val devices by Funk.devices.collectAsStateWithLifecycle()
     val alerts by Funk.alerts.collectAsStateWithLifecycle()
@@ -267,6 +267,9 @@ fun LiveScreen(running: Boolean, demo: Boolean, onStart: () -> Unit, onStop: () 
                     if (hasSession) Recap(devices, alerts, track.map { TrackPoint(it.lat, it.lon, it.time) })
                     BigButton(tr("Scan starten", "Start scan"), filled = true, onClick = onStart)
                     if (!demo && !hasSession) TextAction(tr("Erst die Demo ansehen", "See the demo first"), onClick = onDemo)
+                    // everything scanned so far on one map, no scan needed
+                    val drives = remember(running) { Funk.logs().isNotEmpty() } || Funk.knownCams.collectAsStateWithLifecycle().value.isNotEmpty()
+                    if (!demo && drives) BigButton(tr("Karte aller Fahrten", "Map of all drives"), filled = false, onClick = onAllDrives)
                 }
             }
         }
