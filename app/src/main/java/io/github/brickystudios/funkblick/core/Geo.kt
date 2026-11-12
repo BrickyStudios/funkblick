@@ -4,11 +4,18 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import com.google.gson.annotations.SerializedName
 
 // A drive for other map apps: GPX opens in Organic Maps (and OsmAnd, Komoot, Google Earth), GeoJSON in geojson.io,
 // uMap and QGIS. Notable devices with an estimated position become waypoints, alerts become points.
 
-data class TrackPoint(val lat: Double, val lon: Double, val time: Long)
+// stored in route files by Gson (kept from R8 in proguard-rules.pro); alternate = the names R8 gave the fields in the
+// 1.13 and 1.14 release builds, so route files written by them still open
+data class TrackPoint(
+    @field:SerializedName("lat", alternate = ["a"]) val lat: Double,
+    @field:SerializedName("lon", alternate = ["b"]) val lon: Double,
+    @field:SerializedName("time", alternate = ["c"]) val time: Long,
+)
 
 private fun utc(ms: Long) = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date(ms))
 private fun xml(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")

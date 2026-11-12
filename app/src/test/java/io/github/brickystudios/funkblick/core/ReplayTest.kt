@@ -58,4 +58,17 @@ class ReplayTest {
         assertEquals(listOf(track), legs(track) { it.time })
         assertTrue(legs(emptyList<TrackPoint>()) { it.time }.isEmpty())
     }
+
+    @Test fun routeFileFromTheShrunkReleaseBuildStillReads() {
+        // 1.13 and 1.14 release builds wrote the route file with R8's field names (a, b, c, d)
+        val m = Masker(false, "s")
+        val placed = devices[0]
+        val id = deviceId(placed.radio, placed.address)
+        val old = """{"a":[{"a":53.54,"b":9.98,"c":1000000000},{"a":53.55,"b":9.99,"c":1000060000}],""" +
+            """"b":{"$id":{"a":53.55,"b":9.99,"c":40.0,"d":12}},"c":[{"a":53.551,"b":9.991,"c":1000045000}]}"""
+        val past = readLog(toJson(devices, meta, m, listOf(alert)), old)
+        assertEquals(listOf(TrackPoint(53.54, 9.98, 1_000_000_000L), TrackPoint(53.55, 9.99, 1_000_060_000L)), past.track)
+        assertEquals(Estimate(53.55, 9.99, 40.0, 12), past.devices.single { it.pos != null }.pos)
+        assertEquals(53.551, past.alerts.single().lat!!, 1e-9)
+    }
 }

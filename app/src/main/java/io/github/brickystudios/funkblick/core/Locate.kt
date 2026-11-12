@@ -4,6 +4,7 @@ import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
+import com.google.gson.annotations.SerializedName
 
 // Where is a fixed transmitter (router, camera)? A phone can't measure direction, but it can measure signal
 // strength at many GPS points while you move. The usual answer from wardriving: a weighted centroid of those points,
@@ -13,7 +14,12 @@ import kotlin.math.sqrt
 data class Reading(val lat: Double, val lon: Double, val rssi: Int)
 
 /** radiusM: rough uncertainty, the spread of the readings that carried the estimate. */
-data class Estimate(val lat: Double, val lon: Double, val radiusM: Double, val points: Int)
+data class Estimate( // in route files too: see TrackPoint for the alternate names
+    @field:SerializedName("lat", alternate = ["a"]) val lat: Double,
+    @field:SerializedName("lon", alternate = ["b"]) val lon: Double,
+    @field:SerializedName("radiusM", alternate = ["c"]) val radiusM: Double,
+    @field:SerializedName("points", alternate = ["d"]) val points: Int,
+)
 
 const val MIN_SPREAD_M = 50.0 // readings must cover at least this much ground
 const val MAX_READINGS = 40

@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.google.gson.annotations.SerializedName
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -12,7 +13,11 @@ import java.util.Locale
 // not shared, not copied to Downloads, not backed up. Keys are the device ids as the log writes them (masked in safe mode).
 
 /** alerts: the exact place of each alert, in the log's order (the log rounds them to about 1 km in safe mode). */
-data class RouteFile(val track: List<TrackPoint>, val pos: Map<String, Estimate>, val alerts: List<TrackPoint?>? = null)
+data class RouteFile( // see TrackPoint for the alternate names
+    @field:SerializedName("track", alternate = ["a"]) val track: List<TrackPoint>,
+    @field:SerializedName("pos", alternate = ["b"]) val pos: Map<String, Estimate>,
+    @field:SerializedName("alerts", alternate = ["c"]) val alerts: List<TrackPoint?>? = null,
+)
 
 data class PastSession(val startedAt: Long, val devices: List<Device>, val alerts: List<LoggedAlert>, val track: List<TrackPoint>)
 
