@@ -97,7 +97,7 @@ fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetu
 
         Header(tr("Warnungen", "Alerts"))
         Toggle(tr("Ton", "Sound"), tr("Eigener Ton für jede Art von Warnung; aus schweigen auch die Navigationsansagen", "Its own signal for every kind of alert; off also mutes navigation"), s.sound) { v -> Funk.updateSettings { it.copy(sound = v) } }
-        Toggle(tr("Sprachansage", "Voice"), tr("„Blitzer voraus“, „Tracker ist bei dir“ …", "\"Speed camera ahead\", \"tracker with you\" ..."), s.voice) { v -> Funk.updateSettings { it.copy(voice = v) } }
+        Toggle(tr("Sprachansage", "Voice"), tr("„Blitzer voraus“, „Tracker ist bei dir“ …", "“Speed camera ahead”, “tracker with you” …"), s.voice) { v -> Funk.updateSettings { it.copy(voice = v) } }
         Toggle(tr("Vibration", "Vibration"), null, s.vibrate) { v -> Funk.updateSettings { it.copy(vibrate = v) } }
         Toggle(tr("Tracker-Schutz", "Tracker protection"), tr("Warnt, wenn ein AirTag, SmartTag, Tile & Co. über 10 Minuten mit dir unterwegs ist", "Warns when an AirTag, SmartTag, Tile & co. stays with you for over 10 minutes"), s.trackers) { v -> Funk.updateSettings { it.copy(trackers = v) } }
         Toggle(tr("Kameras", "Cameras"), tr("Warnt bei Kameras mit eigenem WLAN, etwa in der Ferienwohnung", "Warns about cameras running their own Wi-Fi, e.g. in a holiday flat"), s.cameras) { v -> Funk.updateSettings { it.copy(cameras = v) } }
@@ -129,11 +129,11 @@ fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetu
             }
             Text((if (h.known == 1) tr("1 bekanntes Gerät", "1 known device") else tr("${h.known} bekannte Geräte", "${h.known} known devices")) + ". $where." +
                 if (h.learningMin > 0) tr(" Lernt noch ${h.learningMin} min.", " Still learning for ${h.learningMin} min.") else "",
-                color = C.text, fontSize = 15.sp)
+                color = C.text, fontSize = 16.sp)
             if (h.cameras > 0) Text(tr("Darunter ${h.cameras} Kamera${if (h.cameras > 1) "s" else ""}, schon beim Merken da. Gehört sie nicht dir oder dem Gastgeber offen sichtbar: suchen (Peilen).",
-                "Among them ${h.cameras} camera${if (h.cameras > 1) "s" else ""}, there when you remembered the place. If it isn't yours or openly visible: find it."), color = C.red, fontSize = 15.sp)
+                "Among them ${h.cameras} camera${if (h.cameras > 1) "s" else ""}, there when you remembered the place. If it isn't yours or openly visible: find it."), color = C.red, fontSize = 16.sp)
             if (h.new > 0) {
-                Text(tr("${h.new} neu seit dem Merken. Gehört es dir, übernimm es.", "${h.new} new since then. If it's yours, accept it."), color = C.amber, fontSize = 15.sp)
+                Text(tr("${h.new} neu seit dem Merken. Gehört es dir, übernimm es.", "${h.new} new since then. If it's yours, accept it."), color = C.amber, fontSize = 16.sp)
                 BigButton(tr("Als bekannt übernehmen", "Accept as known"), filled = false) { Funk.acceptNewAtHome() }
             }
             if (running) TextAction(tr("Ort neu merken", "Remember the place again")) { Funk.markHome() }
@@ -157,16 +157,16 @@ fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetu
 
         Header(tr("Eigene Regeln", "Your rules"), trailing = "${rules.size}")
         Text(tr("Beobachten = Warnung, sobald es auftaucht. Stumm = nie warnen. Polizei = von dir gesehen, gilt ab jetzt als „wahrscheinlich Polizei“ (gewarnt wird nur mit Verkehrs-Hinweisen). Stumm gewinnt.",
-            "Watch = alert as soon as it shows up. Mute = never alert. Police = you saw it, from now on it counts as \"probably police\" (alerts only with traffic alerts on). Mute wins."), color = C.dim, fontSize = 13.sp)
-        for (r in rules) Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            "Watch = alert as soon as it shows up. Mute = never alert. Police = you saw it, from now on it counts as “probably police” (alerts only with traffic alerts on). Mute wins."), color = C.dim, fontSize = 13.sp)
+        for (r in rules) Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(r.kind.label(), color = when (r.kind) { RuleKind.WATCH -> C.amber; RuleKind.POLICE -> C.blue; RuleKind.MUTE -> C.dim }, fontSize = 14.sp, modifier = Modifier.widthIn(min = 88.dp))
-            Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(r.value, style = data.copy(fontSize = 14.sp))
                 Text(r.field.label() + if (r.note.isNotBlank()) ", ${r.note}" else "", color = C.dim, fontSize = 13.sp)
             }
             TextButton({ Funk.setRules(rules - r) }) { Text(tr("Löschen", "Delete"), color = C.red) }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         BigButton(tr("Regel hinzufügen", "Add rule"), filled = false) { addRule = true }
 
         Header(tr("Export dieser Sitzung", "Export this session"), trailing = tr("${devices.size} Geräte", "${devices.size} devices"))
@@ -247,13 +247,13 @@ fun MoreScreen(onEnableTraffic: () -> Unit, onEnableCarStart: () -> Unit, onSetu
             tr("Blitzer-Daten", "Speed cameras") to tr("${Funk.speedCams.size} feste Blitzer (OSM)", "${Funk.speedCams.size} fixed cameras (OSM)") +
                 (Funk.speedCamsUpdated().takeIf { it > 0 }?.let { ", " + tr("Region aktualisiert ", "region refreshed ") + ago(it, now) } ?: ""),
         )
-        for ((k, v) in rows) Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        for ((k, v) in rows) Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
             Text(k, color = C.dim, fontSize = 13.sp, modifier = Modifier.widthIn(min = 140.dp))
             Text(v, style = data.copy(fontSize = 13.sp))
         }
         Text(tr("Android erlaubt 4 WLAN-Scans in 2 Minuten, also etwa alle 30 s. Im Auto ist das zu langsam: in den Entwickleroptionen die WLAN-Scan-Drosselung ausschalten, dann scannt Funkblick alle 10 s. Läuft der Scan im Hintergrund nicht durch, Akku-Optimierung für Funkblick abschalten.",
             "Android allows 4 Wi-Fi scans per 2 minutes, about one every 30 s. Too slow in a car: switch off Wi-Fi scan throttling in the developer options, then Funkblick scans every 10 s. If scanning stops in the background, turn off battery optimization for Funkblick."),
-            color = C.dim, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 6.dp))
+            color = C.dim, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 8.dp))
         TextAction(tr("Akku-Optimierung öffnen", "Open battery optimization")) { runCatching { context.startActivity(Intent(AndroidSettings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) } }
 
         Header(tr("Über", "About"))
@@ -280,13 +280,13 @@ private fun RuleDialog(onSave: (Rule) -> Unit, onDismiss: () -> Unit) {
         containerColor = C.panel,
         title = { Text(tr("Neue Regel", "New rule"), color = C.text) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Chip(tr("Beobachten", "Watch"), kind == RuleKind.WATCH) { kind = RuleKind.WATCH }
                     Chip(tr("Stumm", "Mute"), kind == RuleKind.MUTE, C.dim) { kind = RuleKind.MUTE }
                     Chip(tr("Polizei", "Police"), kind == RuleKind.POLICE, C.blue) { kind = RuleKind.POLICE }
                 }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (f in RuleField.entries) Chip(f.label(), field == f) { field = f }
                 }
                 OutlinedTextField(value, { value = it }, singleLine = true, label = {

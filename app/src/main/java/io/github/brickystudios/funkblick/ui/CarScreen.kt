@@ -102,7 +102,7 @@ fun CarScreen(running: Boolean, onStart: () -> Unit, onEnableTraffic: () -> Unit
                 }
             } else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Radar(devices, running, Modifier.fillMaxHeight(), labels = false)
-                Text(tr("Warte auf GPS", "Waiting for GPS"), color = C.dim, fontSize = 15.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
+                Text(tr("Warte auf GPS", "Waiting for GPS"), color = C.dim, fontSize = 14.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp))
             }
             NavBanner(light = false, modifier = Modifier.align(Alignment.TopCenter).padding(8.dp))
         }
@@ -145,7 +145,7 @@ fun CarScreen(running: Boolean, onStart: () -> Unit, onEnableTraffic: () -> Unit
                     trafficColor("cam") to tr("Verkehrskamera", "Traffic camera"), trafficColor("alpr") to tr("Kennzeichen-Scanner", "Plate reader"),
                     trafficColor("sensor") to tr("Zählstelle", "Traffic counter"))
                 for ((c, t) in keys) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(min = 24.dp)) {
-                    Dot(c, 10); Spacer(Modifier.width(6.dp)); Text(t, color = C.dim, fontSize = 13.sp)
+                    Dot(c, 10); Spacer(Modifier.width(8.dp)); Text(t, color = C.dim, fontSize = 13.sp)
                 }
             }
             if (!running) BigButton(tr("Scan starten", "Start scan"), filled = true, height = 64, onClick = onStart)
@@ -162,7 +162,7 @@ fun CarScreen(running: Boolean, onStart: () -> Unit, onEnableTraffic: () -> Unit
             }
             if (settings.traffic) TextAction(if (refreshing) tr("Blitzer werden geladen", "Loading speed cameras") else tr("Blitzer der Region aktualisieren", "Refresh speed cameras for this region"), color = C.dim) {
                 // this asks Overpass for your region: the same privacy switch as map data and navigation
-                if (!settings.mapData) { Toast.makeText(context, tr("Braucht „Kartendaten aus dem Netz laden“ (unter Mehr).", "Needs \"Load map data from the network\" (under More)."), Toast.LENGTH_LONG).show(); return@TextAction }
+                if (!settings.mapData) { Toast.makeText(context, tr("Braucht „Kartendaten aus dem Netz laden“ (unter Mehr).", "Needs “Load map data from the network” (under More)."), Toast.LENGTH_LONG).show(); return@TextAction }
                 val f = fix ?: run { Toast.makeText(context, tr("Erst braucht es eine GPS-Position.", "Needs a GPS position first."), Toast.LENGTH_LONG).show(); return@TextAction }
                 if (refreshing) return@TextAction
                 refreshing = true
@@ -230,9 +230,9 @@ fun TrafficWarning(onAccept: () -> Unit, onDismiss: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(tr("Verkehrs-Hinweise warnen vor festen Blitzern (OpenStreetMap) und melden mögliche Behörden- und Fahrzeugtechnik per Ton und Ansage.",
-                    "Traffic alerts warn about fixed speed cameras (OpenStreetMap) and announce possible public safety and vehicle gear."), color = C.text, fontSize = 15.sp)
+                    "Traffic alerts warn about fixed speed cameras (OpenStreetMap) and announce possible public safety and vehicle gear."), color = C.text, fontSize = 16.sp)
                 Text(tr("§ 23 Abs. 1c StVO verbietet Fahrern, Geräte oder App-Funktionen zu nutzen, die Verkehrskontrollen anzeigen. Das kostet 75 € und einen Punkt. Das gilt auch, wenn das Handy des Beifahrers für dich warnt.",
-                    "StVO § 23 (1c) forbids drivers in Germany to use devices or app functions that point out traffic enforcement: 75 € and a point in Flensburg, also when a passenger's phone warns for you."), color = C.text, fontSize = 15.sp)
+                    "StVO § 23 (1c) forbids drivers in Germany to use devices or app functions that point out traffic enforcement: 75 € and a point in Flensburg, also when a passenger's phone warns for you."), color = C.text, fontSize = 16.sp)
                 Text(tr("In der Schweiz sind Blitzerwarner ganz verboten, in Österreich Radarwarner.",
                     "Speed camera warners are banned altogether in Switzerland, radar detectors in Austria."), color = C.dim, fontSize = 14.sp)
                 Text(tr("Ein Hersteller-Treffer heißt nicht, dass Polizei in der Nähe ist. Fahr nach Schildern.",

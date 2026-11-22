@@ -63,13 +63,13 @@ fun DiscreetScreen(onExit: () -> Unit) {
         })
         NavBanner(light = true, modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(12.dp))
         // an ordinary nav app has a place to type where to go; ours sits at the bottom, in the app's own shape
-        if (nav == null) Text(tr("Wohin?", "Where to?"), color = Color(0xFF5A5F66), fontSize = 17.sp,
+        if (nav == null) Text(tr("Wohin?", "Where to?"), color = Color(0xFF5A5F66), fontSize = 16.sp,
             modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(12.dp).fillMaxWidth()
                 .clip(RoundedCornerShape(8.dp)).background(Color.White).clickable(role = Role.Button) { searching = true }
                 .heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 16.dp))
         if (hint) Text(
             tr("Dreimal schnell tippen zum Beenden", "Tap three times quickly to leave"),
-            color = Color(0xFF202124), fontSize = 15.sp,
+            color = Color(0xFF202124), fontSize = 14.sp,
             modifier = Modifier.align(Alignment.Center).padding(24.dp)
                 .clip(RoundedCornerShape(8.dp)).background(Color.White).padding(horizontal = 16.dp, vertical = 12.dp),
         )

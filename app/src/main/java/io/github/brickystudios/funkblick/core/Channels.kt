@@ -1,6 +1,10 @@
 package io.github.brickystudios.funkblick.core
 
-enum class Band(val label: String) { GHZ_2_4("2,4 GHz"), GHZ_5("5 GHz"), GHZ_6("6 GHz") }
+enum class Band(private val ghz: String) {
+    GHZ_2_4("2.4"), GHZ_5("5"), GHZ_6("6");
+    /** "2,4 GHz" in German, "2.4 GHz" in English; read at use time so a language switch follows */
+    val label get() = tr(ghz.replace('.', ','), ghz) + " GHz"
+}
 
 fun bandOf(freq: Int): Band? = when (freq) {
     in 2400..2500 -> Band.GHZ_2_4

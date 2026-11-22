@@ -94,7 +94,7 @@ fun payloadSignature(s: Sighting): PayloadHit? {
     val payloads = s.manufacturerData.values + s.serviceData.values
     val shorts = s.serviceUuids + s.serviceData.keys
     if (payloads.any { it.hasAscii("BWCDEVICE") }) return PayloadHit(Category.PRIORITY, true,
-        tr("Sendet Axons Kennung „BWCDEVICE“: eine Axon-Bodycam, auch hinter einer Zufallsadresse", "Sends Axon's \"BWCDEVICE\" tag: an Axon body cam, also behind a random address"))
+        tr("Sendet Axons Kennung „BWCDEVICE“: eine Axon-Bodycam, auch hinter einer Zufallsadresse", "Sends Axon's “BWCDEVICE” tag: an Axon body cam, also behind a random address"))
     if (shorts.any { it in AXON_UUIDS } || (CID_TASER in s.manufacturerData && !idoWatch(s))) return PayloadHit(Category.PRIORITY, true,
         tr("Axon-/TASER-Kennung im Funk: Bodycam, Taser, Holster-Sensor oder Fahrzeug", "Axon / TASER id in the advert: body cam, taser, holster sensor or vehicle"))
     s.serviceData[UUID_REMOTE_ID]?.takeIf { it.size >= 27 && it[0] == 0x0D.toByte() }?.let {

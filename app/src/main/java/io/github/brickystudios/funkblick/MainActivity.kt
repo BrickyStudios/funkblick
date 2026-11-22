@@ -205,7 +205,7 @@ private fun Tabs(selected: Int, onSelect: (Int) -> Unit) {
                 Modifier.weight(1f).heightIn(min = 56.dp).clickable(role = Role.Tab) { onSelect(i) }.padding(top = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(n, fontSize = 15.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, color = if (on) C.amber else C.dim, maxLines = 1)
+                Text(n, fontSize = 14.sp, fontWeight = if (on) FontWeight.Medium else FontWeight.Normal, color = if (on) C.amber else C.dim, maxLines = 1)
                 Box(Modifier.padding(top = 8.dp).width(if (on) 24.dp else 0.dp).height(2.dp).background(C.amber))
             }
         }

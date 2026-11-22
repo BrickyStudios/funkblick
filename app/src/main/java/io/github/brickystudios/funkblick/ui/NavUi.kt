@@ -73,12 +73,12 @@ fun NavBanner(light: Boolean, modifier: Modifier = Modifier) {
     val c = look(light)
     val p = n.progress
     val m = p?.next
-    Row(modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(c.card).padding(start = 16.dp, top = 10.dp, bottom = 10.dp),
+    Row(modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(c.card).padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically) {
         if (m != null && !p.arrived) Text(arrow(m.type), color = c.accent, fontSize = 40.sp, modifier = Modifier.width(52.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             when {
-                p?.arrived == true -> Text(tr("Ziel erreicht", "You have arrived"), color = c.ink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                p?.arrived == true -> Text(tr("Ziel erreicht", "You have arrived"), color = c.ink, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                 p != null && m != null -> {
                     Text(meters(p.toNext), color = c.ink, fontSize = 28.sp, fontWeight = FontWeight.Bold, fontFamily = if (light) null else Display)
                     Text(m.text, color = c.ink, fontSize = 16.sp, lineHeight = 20.sp, maxLines = 2)
@@ -87,15 +87,15 @@ fun NavBanner(light: Boolean, modifier: Modifier = Modifier) {
                     n.error?.let { Text(it, color = c.accent, fontSize = 14.sp, lineHeight = 18.sp) } // a failed new route, while off the old one
                 }
                 n.error != null -> Text(n.error, color = c.ink, fontSize = 16.sp, lineHeight = 20.sp)
-                !running -> Text(tr("Startet, sobald der Scan läuft", "Starts once the scan runs"), color = c.ink, fontSize = 18.sp)
-                fix == null -> Text(tr("Warte auf GPS", "Waiting for GPS"), color = c.ink, fontSize = 18.sp)
-                else -> Text(tr("Route nach ${n.dest.name} …", "Route to ${n.dest.name} …"), color = c.ink, fontSize = 18.sp, maxLines = 2)
+                !running -> Text(tr("Startet, sobald der Scan läuft", "Starts once the scan runs"), color = c.ink, fontSize = 20.sp)
+                fix == null -> Text(tr("Warte auf GPS", "Waiting for GPS"), color = c.ink, fontSize = 20.sp)
+                else -> Text(tr("Route nach ${n.dest.name} …", "Route to ${n.dest.name} …"), color = c.ink, fontSize = 20.sp, maxLines = 2)
             }
             if (n.busy && p != null) Text(tr("Neue Route …", "New route …"), color = c.accent, fontSize = 14.sp)
         }
         val stop = tr("Navigation beenden", "End navigation")
         Box(Modifier.size(56.dp).clickable(role = Role.Button) { Nav.stop() }.semantics { contentDescription = stop }, contentAlignment = Alignment.Center) {
-            Text("✕", color = c.dim, fontSize = 22.sp)
+            Text("✕", color = c.dim, fontSize = 20.sp)
         }
     }
 }
@@ -107,7 +107,7 @@ private fun PlaceRow(p: Place, c: Look, icon: String?, title: String = p.name, a
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (icon != null) Text(icon, color = c.accent, fontSize = 24.sp, modifier = Modifier.width(36.dp))
         Column(Modifier.weight(1f).clickable(role = Role.Button, onClick = onGo).heightIn(min = 56.dp).padding(vertical = 8.dp)) {
-            Text(title, color = c.ink, fontSize = 17.sp)
+            Text(title, color = c.ink, fontSize = 16.sp)
             val sub = if (title == p.name) p.detail else listOf(p.name, p.detail).filter { it.isNotEmpty() }.joinToString(", ")
             if (sub.isNotEmpty()) Text(sub, color = c.dim, fontSize = 14.sp)
         }
@@ -146,7 +146,7 @@ fun DestinationSearch(light: Boolean, onClose: () -> Unit) {
         containerColor = c.card,
         title = { Text(tr("Bist du Beifahrer?", "Are you the passenger?"), color = c.ink) },
         text = { Text(tr("Fahrer dürfen das Handy während der Fahrt nur kurz ansehen (§ 23 Abs. 1a StVO). Ein Ziel eintippen dauert länger. Halte an oder gib das Handy deinem Beifahrer.",
-            "Drivers may only glance at the phone while driving (StVO § 23 (1a)). Typing a destination takes longer than that. Stop first or hand the phone to your passenger."), color = c.ink, fontSize = 15.sp) },
+            "Drivers may only glance at the phone while driving (StVO § 23 (1a)). Typing a destination takes longer than that. Stop first or hand the phone to your passenger."), color = c.ink, fontSize = 16.sp) },
         confirmButton = { TextButton({ Nav.passengerDrive = diag.serviceSince; passenger = true }) { Text(tr("Ja, ich bin Beifahrer", "Yes, I'm the passenger"), color = c.accent) } },
         dismissButton = { TextButton({ driver = true }) { Text(tr("Ich fahre", "I'm driving"), color = c.dim) } },
     )
@@ -169,11 +169,11 @@ fun DestinationSearch(light: Boolean, onClose: () -> Unit) {
         }
         if (!settings.mapData) {
             Text(tr("Navigation braucht das Netz. Unter Mehr „Kartendaten aus dem Netz laden“ einschalten.",
-                "Navigation needs the network. Turn on \"Load map data from the network\" under More."), color = c.ink, fontSize = 16.sp)
+                "Navigation needs the network. Turn on “Load map data from the network” under More."), color = c.ink, fontSize = 16.sp)
             return@Column
         }
         when {
-            locked -> Text(tr("Ziel im Stand eingeben. „Nach Hause“ geht mit einem Tipp.", "Enter the destination once you've stopped. \"Home\" takes one tap."), color = c.ink, fontSize = 16.sp)
+            locked -> Text(tr("Ziel im Stand eingeben. „Nach Hause“ geht mit einem Tipp.", "Enter the destination once you've stopped. “Home” takes one tap."), color = c.ink, fontSize = 16.sp)
             busy -> Text(tr("Suche …", "Searching …"), color = c.dim, fontSize = 16.sp)
             failed -> Text(tr("Keine Verbindung.", "No connection."), color = c.ink, fontSize = 16.sp)
             results?.isEmpty() == true -> Text(tr("Nichts gefunden.", "Nothing found."), color = c.ink, fontSize = 16.sp)

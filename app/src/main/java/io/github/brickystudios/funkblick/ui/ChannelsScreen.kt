@@ -35,7 +35,7 @@ fun ChannelsScreen() {
     val wifi = devices.filter { it.radio == Radio.WIFI }
     val use = channelUse(wifi)
     val tips = channelTips(wifi)
-    Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(tr("WLAN-Kanäle", "Wi-Fi channels"), fontFamily = Display, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = C.amber)
         Text(tr("Welcher Kanal ist bei dir am freiesten? Funkblick zählt die Netze in Reichweite und gewichtet sie nach Signalstärke. EU-Regeln: 2,4 GHz Kanal 1 bis 13.",
             "Which channel is the quietest here? Funkblick counts the networks in range and weighs them by signal. EU rules: 2.4 GHz channels 1 to 13."), color = C.dim, fontSize = 14.sp, lineHeight = 19.sp)
@@ -47,7 +47,7 @@ fun ChannelsScreen() {
         for (t in tips) Panel(accent = C.amber) {
             Column {
                 Text(t.band.label, style = label)
-                Text(tr("Kanal ${t.channel}", "Channel ${t.channel}"), style = data.copy(fontSize = 30.sp, fontWeight = FontWeight.Bold, color = C.amber))
+                Text(tr("Kanal ${t.channel}", "Channel ${t.channel}"), style = data.copy(fontSize = 28.sp, fontWeight = FontWeight.Medium, color = C.amber))
                 Text(
                     when {
                         t.networks == 0 -> tr("kein anderes Netz in der Nähe", "no other network near it")
@@ -58,7 +58,7 @@ fun ChannelsScreen() {
             }
         }
         Text(tr("FRITZ!Box: unter WLAN, Funkkanal die Funkkanal-Einstellungen anpassen. Andere Router: im WLAN-Menü nach „Kanal“ suchen.",
-            "FRITZ!Box: under Wi-Fi, Radio channel, adjust the radio channel settings. Other routers: look for \"channel\" in the Wi-Fi settings."), color = C.dim, fontSize = 13.sp, lineHeight = 17.sp)
+            "FRITZ!Box: under Wi-Fi, Radio channel, adjust the radio channel settings. Other routers: look for “channel” in the Wi-Fi settings."), color = C.dim, fontSize = 13.sp, lineHeight = 17.sp)
         for (band in Band.entries) {
             val list = use.filter { it.band == band }
             if (list.isEmpty()) continue

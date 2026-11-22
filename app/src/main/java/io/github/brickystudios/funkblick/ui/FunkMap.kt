@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -94,7 +95,7 @@ private fun tintDark(style: Style) {
             l.id.startsWith("waterway") -> "#1B2028"
             else -> "#3A2E1A"
         }))
-        is SymbolLayer -> l.setProperties(P.textColor("#A39780"), P.textHaloColor("#0D0C0A"))
+        is SymbolLayer -> l.setProperties(P.textColor("#A39780"), P.textHaloColor("#0D0C0A"), P.textTransform(Property.TEXT_TRANSFORM_NONE))
     }
 }
 
@@ -293,6 +294,7 @@ fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow:
                 m.uiSettings.setAttributionMargins((16 * density).toInt(), 0, 0, (96 * density).toInt())
             }
             m.uiSettings.isLogoEnabled = false
+            if (look == MapLook.DARK) m.uiSettings.setAttributionTintColor(C.dim.toArgb())
             m.addOnCameraMoveStartedListener { reason -> if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) lost() }
             m.addOnMapClickListener { ll ->
                 val p = m.projection.toScreenLocation(ll)
@@ -390,7 +392,7 @@ fun FunkMap(modifier: Modifier = Modifier, look: MapLook = MapLook.DARK, follow:
         })
         info?.let { t ->
             // what the tapped dot is; a tap on it or on empty map closes it
-            Text(t, color = C.text, fontSize = 15.sp, modifier = Modifier.align(Alignment.BottomStart).padding(12.dp).fillMaxWidth(0.62f)
+            Text(t, color = C.text, fontSize = 14.sp, modifier = Modifier.align(Alignment.BottomStart).padding(12.dp).fillMaxWidth(0.62f)
                 .clip(RoundedCornerShape(8.dp)).background(C.panel).clickable { info = null }.padding(12.dp))
         }
     }

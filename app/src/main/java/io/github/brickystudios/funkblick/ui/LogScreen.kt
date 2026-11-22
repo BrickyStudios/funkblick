@@ -61,8 +61,8 @@ fun LogScreen(file: File?, onClose: () -> Unit) {
                 fontFamily = Display, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = C.amber)
         }
         when {
-            loaded == null -> Text(tr("Lädt …", "Loading ..."), color = C.dim, fontSize = 15.sp, modifier = Modifier.padding(16.dp))
-            p == null -> Text(tr("Dieses Log lässt sich nicht lesen.", "This log can't be read."), color = C.red, fontSize = 15.sp, modifier = Modifier.padding(16.dp))
+            loaded == null -> Text(tr("Lädt …", "Loading …"), color = C.dim, fontSize = 14.sp, modifier = Modifier.padding(16.dp))
+            p == null -> Text(tr("Dieses Log lässt sich nicht lesen.", "This log can't be read."), color = C.red, fontSize = 14.sp, modifier = Modifier.padding(16.dp))
             else -> LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (file == null || p.track.size > 1 || p.devices.any { it.pos != null } || p.alerts.any { it.lat != null }) item {
                     FunkMap(Modifier.fillMaxWidth().height(420.dp).clip(RoundedCornerShape(8.dp)), follow = false, past = p, allDrives = file == null, onTap = { open = it })

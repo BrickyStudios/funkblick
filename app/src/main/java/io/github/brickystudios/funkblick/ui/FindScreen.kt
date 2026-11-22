@@ -84,14 +84,14 @@ fun FindScreen(id: String, onStartScan: () -> Unit, onClose: () -> Unit, help: B
     Dialog(onClose, DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
             Modifier.fillMaxSize().background(C.ink).statusBarsPadding().navigationBarsPadding().padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(tr("Peilen", "Find"), fontFamily = Display, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = C.amber, modifier = Modifier.fillMaxWidth())
             Box(Modifier.fillMaxWidth().height(1.dp).background(C.line))
             val name = d?.let { Funk.screenMasker().name(it) ?: it.cls.tracker?.kind?.label } ?: "?"
-            Text(name, color = C.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-            Text(d?.cls?.category?.short() ?: "", color = d?.cls?.category?.color() ?: C.dim, fontSize = 15.sp)
-            Text(if (stale) "–" else "%.0f".format(smooth), style = data.copy(fontSize = 96.sp, fontWeight = FontWeight.Bold, color = if (stale) C.dim else C.amber))
+            Text(name, color = C.text, fontSize = 24.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
+            Text(d?.cls?.category?.short() ?: "", color = d?.cls?.category?.color() ?: C.dim, fontSize = 14.sp)
+            Text(if (stale) "–" else "%.0f".format(smooth), style = data.copy(fontSize = 96.sp, fontWeight = FontWeight.Medium, color = if (stale) C.dim else C.amber))
             Text("dBm", style = label)
             Canvas(Modifier.fillMaxWidth().height(36.dp)) {
                 drawRoundRect(C.line, Offset.Zero, size, CornerRadius(18f))
@@ -121,7 +121,7 @@ fun FindScreen(id: String, onStartScan: () -> Unit, onClose: () -> Unit, help: B
                         tr("1. Suchen: Taschen, Jacke, Rucksack, Auto. Die Zahl steigt, wenn du näher kommst.", "1. Search bags, jacket, backpack, car. The number rises as you get closer."),
                         tr("2. Gefunden? Behalten, nicht wegwerfen: es ist ein Beweismittel.", "2. Found it? Keep it, it is evidence."),
                         tr("3. Fühlst du dich bedroht, ruf an. Kostenlos und anonym:", "3. If you feel threatened, call. Free and anonymous in Germany:"),
-                    )) Text(s, color = C.text, fontSize = 15.sp, lineHeight = 21.sp)
+                    )) Text(s, color = C.text, fontSize = 16.sp, lineHeight = 22.sp)
                     androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         for ((n, t) in listOf("110" to tr("Polizei", "Police"), "116016" to tr("Hilfetelefon", "Helpline")))
                             BigButton("$t $n", filled = false, color = C.red, modifier = Modifier.weight(1f), height = 48) {

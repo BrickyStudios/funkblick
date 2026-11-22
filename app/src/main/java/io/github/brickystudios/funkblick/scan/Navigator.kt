@@ -101,7 +101,7 @@ object Nav {
         // the one place every request passes (start, "Home", retry, new route): the privacy switch holds for all of them
         if (!Funk.settings.value.mapData) {
             state.value = s.copy(busy = false, error = tr("Navigation braucht „Kartendaten aus dem Netz laden“ (unter Mehr).",
-                "Navigation needs \"Load map data from the network\" (under More)."))
+                "Navigation needs “Load map data from the network” (under More)."))
             return
         }
         state.value = s.copy(busy = true)

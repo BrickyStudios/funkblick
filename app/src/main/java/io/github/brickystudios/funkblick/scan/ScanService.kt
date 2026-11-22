@@ -297,7 +297,7 @@ class ScanService : Service() {
         val text = if (bt) tr("Ohne Bluetooth keine Tracker-Warnung. Tippen zum Einschalten.", "No tracker alerts without Bluetooth. Tap to turn it on.")
         else tr("Ohne WLAN keine WLAN-Scans. Tippen zum Einschalten.", "No Wi-Fi scans without Wi-Fi. Tap to turn it on.")
         val tip = tr("Schaltet GrapheneOS es von selbst aus: in den Einstellungen nach „automatisch“ suchen und den Timer auf „Nie“ stellen.",
-            "If GrapheneOS switches it off by itself: search Settings for \"automatically\" and set the timer to never.")
+            "If GrapheneOS switches it off by itself: search Settings for “automatically” and set the timer to never.")
         val n = NotificationCompat.Builder(this, Alerter.CHANNEL_ALERTS)
             .setSmallIcon(R.drawable.ic_stat)
             .setContentTitle(if (bt) tr("Bluetooth ist aus", "Bluetooth is off") else tr("WLAN ist aus", "Wi-Fi is off"))

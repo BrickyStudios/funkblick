@@ -121,7 +121,7 @@ fun BigButton(text: String, filled: Boolean, color: Color = C.amber, modifier: M
             .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = if (filled) C.ink else color)
+        Text(text, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = if (filled) C.ink else color)
     }
 }
 
@@ -229,8 +229,8 @@ fun LiveScreen(running: Boolean, demo: Boolean, onStart: () -> Unit, onStop: () 
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(C.red.copy(alpha = 0.14f))
                 .clickable(role = Role.Button) { runCatching { context.startActivity(miss.second) } }.heightIn(min = 48.dp).padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                Text(miss.first, color = C.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                Text(tr("Einschalten", "Turn on"), color = C.red, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(miss.first, color = C.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                Text(tr("Einschalten", "Turn on"), color = C.red, fontSize = 16.sp, fontWeight = FontWeight.Medium)
             }
         }
         if (fix != null || running) item {
@@ -292,7 +292,7 @@ fun Recap(devices: List<Device>, alerts: List<LoggedAlert>, track: List<TrackPoi
     @Composable
     fun Num(k: String, v: String, warn: Boolean = false) = Column(Modifier.widthIn(min = 72.dp)) {
         Text(k, style = label)
-        Text(v, style = data.copy(fontSize = 18.sp, color = if (warn) C.red else C.text))
+        Text(v, style = data.copy(fontSize = 20.sp, color = if (warn) C.red else C.text))
     }
     Panel {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -367,7 +367,7 @@ fun ListScreen(onOpen: (Device) -> Unit) {
         LazyColumn(contentPadding = PaddingValues(16.dp)) {
             item { Text(tr("${shown.size} von ${devices.size}, stärkstes Signal zuerst", "${shown.size} of ${devices.size}, strongest first"), style = label, modifier = Modifier.padding(bottom = 8.dp)) }
             items(shown, key = { it.id }) { d -> DeviceRow(d, m, now) { onOpen(d) }; Divider() }
-            if (shown.isEmpty()) item { Text(if (devices.isEmpty()) tr("Noch nichts gesehen. Starte den Scan auf Live.", "Nothing seen yet. Start the scan on Live.") else tr("Nichts in diesem Filter.", "Nothing in this filter."), color = C.dim, fontSize = 15.sp) }
+            if (shown.isEmpty()) item { Text(if (devices.isEmpty()) tr("Noch nichts gesehen. Starte den Scan auf Live.", "Nothing seen yet. Start the scan on Live.") else tr("Nichts in diesem Filter.", "Nothing in this filter."), color = C.dim, fontSize = 14.sp) }
         }
     }
 }
@@ -389,40 +389,41 @@ fun DeviceSheet(d: Device, onFind: () -> Unit, past: Boolean = false, onDismiss:
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = C.panel) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(d.cls.category.label(), color = col, fontSize = 14.sp)
-            Text(m.name(d) ?: d.cls.tracker?.kind?.label ?: tr("Ohne Namen", "No name"), color = C.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-            Text(d.whyLine(), color = C.dim, fontSize = 15.sp)
-            d.police?.let { Text(it.why, color = C.blue, fontSize = 15.sp, lineHeight = 21.sp) }
-            if (!past) Funk.seenBefore(d).takeIf { it.isNotEmpty() }?.let { Text(tr("Schon gesehen: ", "Seen before: ") + it.take(3).joinToString(" · ") { t -> sessionLabel(t) }, color = C.amber, fontSize = 15.sp) }
+            Text(m.name(d) ?: d.cls.tracker?.kind?.label ?: tr("Ohne Namen", "No name"), color = C.text, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+            Text(d.whyLine(), color = C.dim, fontSize = 16.sp)
+            d.police?.let { Text(it.why, color = C.blue, fontSize = 16.sp, lineHeight = 22.sp) }
+            if (!past) Funk.seenBefore(d).takeIf { it.isNotEmpty() }?.let { Text(tr("Schon gesehen: ", "Seen before: ") + it.take(3).joinToString(" · ") { t -> sessionLabel(t) }, color = C.amber, fontSize = 16.sp) }
             Gap(12)
             // an old log: the device is long gone, and its address may be shortened (safe mode), so no finding and no rules
             if (!past) BigButton(tr("Peilen: hingehen und finden", "Find it: walk towards it"), filled = true, onClick = onFind)
             Header(tr("Daten", "Details"))
             val rows = listOf(
-                tr("Funk", "Radio") to if (d.radio == Radio.WIFI) tr("WLAN-Zugangspunkt", "Wi-Fi access point") else "Bluetooth LE",
-                tr("Adresse", "Address") to m.address(d.address) + if (d.cls.randomAddress) tr(" (zufällig)", " (random)") else "",
-                tr("Hersteller", "Maker") to (d.cls.vendor ?: tr("unbekannt", "unknown")),
-                tr("Signal", "Signal") to "${d.rssi} dBm, max ${d.rssiMax}",
-                tr("Kanal", "Channel") to (d.freqMhz.takeIf { it > 0 }?.let { "${channelOf(it)} (${bandOf(it)?.label ?: ""}, $it MHz)" } ?: "–"),
-                tr("Sicherheit", "Security") to (d.security?.name ?: "–"),
-                tr("Zuerst", "First seen") to if (past) sessionLabel(d.firstSeen) else ago(d.firstSeen),
-                tr("Zuletzt", "Last seen") to if (past) sessionLabel(d.lastSeen) else ago(d.lastSeen),
-                tr("Gesehen", "Seen") to "${d.seenCount}×" + if (d.places > 0) tr(", an ${d.places} Orten", ", at ${d.places} places") else "",
-                tr("Position", "Position") to (d.pos?.let { tr("geschätzt, ±${it.radiusM.toInt()} m aus ${it.points} Messungen", "estimated, ±${it.radiusM.toInt()} m from ${it.points} readings") }
-                    ?: tr("noch zu wenig Messpunkte", "not enough readings yet")),
+                Triple(tr("Funk", "Radio"), if (d.radio == Radio.WIFI) tr("WLAN-Zugangspunkt", "Wi-Fi access point") else "Bluetooth LE", false),
+                Triple(tr("Adresse", "Address"), m.address(d.address) + if (d.cls.randomAddress) tr(" (zufällig)", " (random)") else "", true),
+                Triple(tr("Hersteller", "Maker"), d.cls.vendor ?: tr("unbekannt", "unknown"), false),
+                Triple(tr("Signal", "Signal"), "${d.rssi} dBm, max ${d.rssiMax}", true),
+                Triple(tr("Kanal", "Channel"), d.freqMhz.takeIf { it > 0 }?.let { "${channelOf(it)} (${bandOf(it)?.label ?: ""}, $it MHz)" } ?: "–", true),
+                Triple(tr("Sicherheit", "Security"), d.security?.name ?: "–", true),
+                Triple(tr("Zuerst", "First seen"), if (past) sessionLabel(d.firstSeen) else ago(d.firstSeen), true),
+                Triple(tr("Zuletzt", "Last seen"), if (past) sessionLabel(d.lastSeen) else ago(d.lastSeen), true),
+                Triple(tr("Gesehen", "Seen"), "${d.seenCount}×" + if (d.places > 0) tr(", an ${d.places} Orten", ", at ${d.places} places") else "", true),
+                Triple(tr("Position", "Position"), d.pos?.let { tr("geschätzt, ±${it.radiusM.toInt()} m aus ${it.points} Messungen", "estimated, ±${it.radiusM.toInt()} m from ${it.points} readings") }
+                    ?: tr("noch zu wenig Messpunkte", "not enough readings yet"), false),
             )
-            for ((k, v) in rows) Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                Text(k, color = C.dim, fontSize = 14.sp, modifier = Modifier.widthIn(min = 112.dp))
-                Text(v, style = data)
+            for ((k, v, mono) in rows) Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Text(k, color = C.dim, fontSize = 14.sp, modifier = Modifier.width(112.dp).alignByBaseline())
+                // Mono only for measured values; what a device is reads as text
+                Text(v, style = if (mono) data else data.copy(fontFamily = Sans), modifier = Modifier.alignByBaseline())
             }
             Header(tr("Warum diese Einordnung", "Why this classification"))
             for (e in d.cls.evidence) Row(Modifier.padding(vertical = 4.dp)) {
                 Text(when (e.source) {
                     Source.REGISTRY -> tr("Register", "Registry"); Source.SIGNATURE -> tr("Hersteller", "Maker"); Source.PAYLOAD -> tr("Funk", "Radio")
                     Source.NAME -> "Name"; Source.RULE -> tr("Regel", "Rule")
-                }, color = if (e.confidence == Confidence.HIGH) C.amber else C.dim, fontSize = 13.sp, modifier = Modifier.widthIn(min = 88.dp).padding(top = 2.dp))
-                Text(e.text, color = C.text, fontSize = 15.sp, lineHeight = 21.sp)
+                }, color = if (e.confidence == Confidence.HIGH) C.amber else C.dim, fontSize = 14.sp, modifier = Modifier.width(112.dp).alignByBaseline())
+                Text(e.text, color = C.text, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.alignByBaseline())
             }
-            if (d.cls.evidence.isEmpty()) Text(tr("Keine Hinweise: Zufallsadresse ohne Herstellerdaten.", "No clues: random address without maker data."), color = C.dim, fontSize = 15.sp)
+            if (d.cls.evidence.isEmpty()) Text(tr("Keine Hinweise: Zufallsadresse ohne Herstellerdaten.", "No clues: random address without maker data."), color = C.dim, fontSize = 14.sp)
             if (d.cls.category == Category.PRIORITY || d.cls.category == Category.FLEET || d.cls.category == Category.CAR)
                 Text(tr("Ein Hersteller-Treffer sagt, wer die Hardware gebaut hat, nicht wer sie betreibt.",
                     "A maker match says who built the hardware, not who operates it."), color = C.dim, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))

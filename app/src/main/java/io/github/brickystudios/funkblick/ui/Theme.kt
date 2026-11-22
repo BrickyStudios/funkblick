@@ -91,7 +91,7 @@ fun Category.short(): String = when (this) {
 }
 
 // Type (plan 4G): IBM Plex Sans for text, IBM Plex Mono only for measured values (4C), Chakra Petch for a few headings
-// and the big numbers of car mode. Scale 13/14/16/20/28/40.
+// and the big numbers of car mode. Scale 13/14/16/20/24/28/40, plus 56 and 96 for car speed and the find meter.
 @OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
 private fun plex(w: Int) = Font(R.font.ibmplexsans_variable, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
 val Sans = FontFamily(plex(400), plex(500), plex(600))
